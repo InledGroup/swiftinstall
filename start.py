@@ -5,6 +5,7 @@ import subprocess
 import os
 import threading
 import webbrowser
+from gi.repository import Gtk, GLib
 
 class InstalledAppsWindow(Gtk.Window):
     def __init__(self, parent):
@@ -13,35 +14,69 @@ class InstalledAppsWindow(Gtk.Window):
         self.set_transient_for(parent)
         self.set_modal(True)
 
+        # Crear un contenedor principal
+        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        self.add(main_box)
+
+        # Añadir el campo de búsqueda
+        self.search_entry = Gtk.SearchEntry()
+        self.search_entry.set_placeholder_text("Buscar aplicaciones...")
+        self.search_entry.connect("search-changed", self.on_search_changed)
+        main_box.pack_start(self.search_entry, False, False, 0)
+
+        # Crear el ScrolledWindow y añadirlo al contenedor principal
         scrolled_window = Gtk.ScrolledWindow()
         scrolled_window.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        self.add(scrolled_window)
+        main_box.pack_start(scrolled_window, True, True, 0)
 
+        # Crear el ListBox y añadirlo al ScrolledWindow
         self.listbox = Gtk.ListBox()
         scrolled_window.add(self.listbox)
 
+        # Configurar el filtro
+        self.listbox.set_filter_func(self.filter_func)
+
+        # Cargar las aplicaciones
         self.load_installed_apps()
 
-    def load_installed_apps(self):
-        try:
-            output = subprocess.check_output(['dpkg', '--get-selections']).decode('utf-8')
-            for line in output.split('\n'):
-                if line.strip():
-                    package_name = line.split()[0]
-                    row = Gtk.ListBoxRow()
-                    hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=50)
-                    row.add(hbox)
-                    label = Gtk.Label(label=package_name, xalign=0)
-                    hbox.pack_start(label, True, True, 0)
-                    button = Gtk.Button(label="x")
-                    button.connect("clicked", self.on_uninstall_clicked, package_name)
-                    hbox.pack_start(button, False, False, 0)
-                    self.listbox.add(row)
-        except subprocess.CalledProcessError:
-            label = Gtk.Label(label="Unable to retrieve installed applications")
-            self.listbox.add(label)
+    def on_search_changed(self, entry):
+        self.listbox.invalidate_filter()
 
-        self.listbox.show_all()
+    def filter_func(self, row):
+        text = self.search_entry.get_text().lower()
+        if not text:
+            return True
+        label = row.get_child().get_children()[0]
+        return text in label.get_text().lower()
+
+    def load_installed_apps(self):
+        def add_app(package_name):
+            row = Gtk.ListBoxRow()
+            hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=50)
+            row.add(hbox)
+            label = Gtk.Label(label=package_name, xalign=0)
+            hbox.pack_start(label, True, True, 0)
+            button = Gtk.Button(label="x")
+            button.connect("clicked", self.on_uninstall_clicked, package_name)
+            hbox.pack_start(button, False, False, 0)
+            self.listbox.add(row)
+            row.show_all()
+            return False
+
+        def load_apps():
+            try:
+                output = subprocess.check_output(['dpkg', '--get-selections']).decode('utf-8')
+                for line in output.split('\n'):
+                    if line.strip():
+                        package_name = line.split()[0]
+                        GLib.idle_add(add_app, package_name)
+            except subprocess.CalledProcessError:
+                label = Gtk.Label(label="Unable to retrieve installed applications")
+                self.listbox.add(label)
+            
+            return False
+
+        GLib.idle_add(load_apps)
 
     def on_uninstall_clicked(self, button, package_name):
         dialog = Gtk.MessageDialog(
@@ -105,13 +140,14 @@ class PackageInstaller(Gtk.Window):
         vbox.pack_start(menu_bar, False, False, 0)
 
         # About menu
-        about_menu = Gtk.MenuItem(label="Acerca de Swift Install v1.2")
+        about_menu = Gtk.MenuItem(label="Acerca de Swift Install v2.0")
         menu_bar.append(about_menu)
 
         about_submenu = Gtk.Menu()
         about_menu.set_submenu(about_submenu)
 
         author_item = Gtk.MenuItem(label="Inled Group")
+        author_item.connect("activate", self.open_inled_es)
         about_submenu.append(author_item)
 
         report_item = Gtk.MenuItem(label="Reportar un error")
@@ -343,6 +379,8 @@ class PackageInstaller(Gtk.Window):
 
     def on_report_issue(self, widget):
         webbrowser.open("https://github.com/yourusername/package-installer/issues")
+    def open_inled_es(self, widget):
+        webbrowser.open("https://inled.es")
 
 def Component():
     win = PackageInstaller()
