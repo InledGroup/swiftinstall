@@ -378,7 +378,7 @@ class PackageInstaller(Gtk.Window):
         self.file_chooser.set_sensitive(True)
 
     def on_report_issue(self, widget):
-        webbrowser.open("https://github.com/yourusername/package-installer/issues")
+        webbrowser.open("https://github.com/Inled-Group/swiftinstall/issues")
     def open_inled_es(self, widget):
         webbrowser.open("https://inled.es")
 
