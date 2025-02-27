@@ -30,7 +30,7 @@ Y ya estaría desinstalada la aplicación.
 
    ```sh
    sudo apt update
-   sudo apt install -y gir1.2-gtk-3.0 python3-gi
+   sudo apt install -y gir1.2-gtk-3.0 python3-gi pkexec
    ```
 
 5. En el gestor de archivos, haz **clic derecho** en `start.sh` y pulsa en **"Ejecutar como programa"**.
