@@ -1,0 +1,11 @@
+Package: Swiftinstall
+Version: 2.0
+Section: utils
+Priority: optional
+Architecture: all
+Depends: python3, python3-gi, gir1.2-gtk-3.0
+Maintainer: Inled Group <contacto@inled.es>
+Description: Swift Install Package Manager
+ A simple GTK application for installing and managing
+ various package formats including .deb, .rpm, .appimage,
+ and compressed archives on Linux systems.
