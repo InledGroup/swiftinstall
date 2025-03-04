@@ -1,0 +1,14 @@
+
+DEBIAN
+- control
+snap
+-snapcraft.yaml
+usr
+-bin
+--swiftinstall
+-share
+--applications
+---swiftinstall.desktop
+--pixmaps
+---swiftinstall.png
+--swiftinstall
