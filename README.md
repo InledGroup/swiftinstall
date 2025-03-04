@@ -18,14 +18,9 @@ Y ya estaría instalada la aplicación.
 Y ya estaría desinstalada la aplicación.
 
 ## Empezar a usar SwiftInstall
-1. Descarga los ficheros `start.py` y `start.sh`.
-2. [Instala Python en tu dispositivo](https://python-guide-es.readthedocs.io/es/latest/starting/install3/linux.html).
-3. Dale permisos de ejecución a `start.sh` con el siguiente comando:
-
-   ```sh
-   chmod +x start.sh
-   ```
-
+1. **Descarga** la aplicación en .deb
+2. Ejecuta `dpkg -i [nombre del paquete.deb]`
+3. [Instala Python en tu dispositivo](https://python-guide-es.readthedocs.io/es/latest/starting/install3/linux.html).
 4. Instala el paquete **GTK y PyGObject** si no los tienes en tu sistema:
 
    ```sh
@@ -33,4 +28,3 @@ Y ya estaría desinstalada la aplicación.
    sudo apt install -y gir1.2-gtk-3.0 python3-gi pkexec
    ```
 
-5. En el gestor de archivos, haz **clic derecho** en `start.sh` y pulsa en **"Ejecutar como programa"**.
