@@ -1,3 +1,4 @@
+![Banner SwiftInstall](/corp/SwiftInstall%20banner.png)
 # SwiftInstall
 
 Instala y desinstala aplicaciones fuera de la Store en Linux de forma gráfica.
