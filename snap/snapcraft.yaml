@@ -1,0 +1,67 @@
+name: swiftinstall
+version: '2.0'
+summary: Simple package installer for Linux
+description: |
+  Swift Install is a GUI tool that makes it easy to install and manage 
+  various package formats on Linux, including .deb, .rpm, .appimage, 
+  and compressed archive formats.
+
+base: core22
+confinement: devmode
+
+grade: devel
+
+apps:
+  swiftinstall:
+    command: usr/bin/swiftinstall
+    desktop: usr/share/applications/swiftinstall.desktop
+    extensions: [gnome]
+    plugs:
+      - home
+      - network
+      - removable-media
+      - unity7
+      - x11
+      - wayland
+      - desktop
+      - package-management
+      - apt-dpkg-exec
+      - system-observe
+      - mount-observe
+      - hardware-observe
+      - process-control
+      - network-bind
+      - network-control
+      - system-files
+      - personal-files
+      - polkit  # Añadir la interfaz polkit
+
+parts:
+  swiftinstall:
+    plugin: dump
+    source: .
+    organize:
+      start.py: usr/share/swiftinstall/start.py
+      swiftinstall.desktop: usr/share/applications/swiftinstall.desktop
+      swiftinstall.png: usr/share/pixmaps/swiftinstall.png
+    stage-packages:
+      - python3-gi
+      - python3-cairo
+      - gir1.2-gtk-3.0
+      - apt
+      - dpkg
+      - policykit-1
+      - rpm
+      - tar
+    override-build: |
+      snapcraftctl build
+      mkdir -p $SNAPCRAFT_PART_INSTALL/usr/bin
+      echo '#!/bin/bash' > $SNAPCRAFT_PART_INSTALL/usr/bin/swiftinstall
+      echo 'export PYTHONPATH=$SNAP/usr/lib/python3/dist-packages:$PYTHONPATH' >> $SNAPCRAFT_PART_INSTALL/usr/bin/swiftinstall
+      echo 'export GI_TYPELIB_PATH=$SNAP/usr/lib/girepository-1.0:$GI_TYPELIB_PATH' >> $SNAPCRAFT_PART_INSTALL/usr/bin/swiftinstall
+      echo 'exec python3 $SNAP/usr/share/swiftinstall/start.py "$@"' >> $SNAPCRAFT_PART_INSTALL/usr/bin/swiftinstall
+      chmod +x $SNAPCRAFT_PART_INSTALL/usr/bin/swiftinstall
+
+environment:
+  PYTHONPATH: $SNAP/usr/lib/python3/dist-packages:$PYTHONPATH
+  GI_TYPELIB_PATH: $SNAP/usr/lib/girepository-1.0

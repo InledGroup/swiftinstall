@@ -5,7 +5,65 @@ import subprocess
 import os
 import threading
 import webbrowser
+import requests
+from packaging import version
 from gi.repository import Gtk, GLib
+
+# Versión actual de la aplicación
+CURRENT_VERSION = "3.0"  # Cambia esto a la versión actual de tu aplicación
+GITHUB_REPO = "Inled-Group/swiftinstall"
+
+def check_for_updates():
+    """
+    Comprueba si hay actualizaciones comparando la versión actual con la última versión en GitHub.
+    Devuelve una tupla (hay_actualizacion, ultima_version, url_release) o None si falla
+    """
+    try:
+        response = requests.get(f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest", timeout=5)
+        if response.status_code == 200:
+            release_data = response.json()
+            latest_version = release_data['tag_name'].lstrip('v')
+            release_url = release_data['html_url']
+            
+            # Comparar versiones
+            if version.parse(latest_version) > version.parse(CURRENT_VERSION):
+                return (True, latest_version, release_url)
+            return (False, latest_version, release_url)
+    except Exception as e:
+        print(f"Error al comprobar actualizaciones: {str(e)}")
+    return None
+
+class UpdateDialog(Gtk.Dialog):
+    def __init__(self, parent, latest_version, release_url):
+        Gtk.Dialog.__init__(
+            self, title="Actualización disponible", transient_for=parent, flags=0
+        )
+        self.add_buttons(
+            "Actualizar ahora", Gtk.ResponseType.YES,
+            "Recordar más tarde", Gtk.ResponseType.NO,
+            "Ignorar esta versión", Gtk.ResponseType.CANCEL
+        )
+        
+        self.set_default_size(350, 150)
+        
+        content_area = self.get_content_area()
+        content_area.set_spacing(10)
+        content_area.set_margin_top(10)
+        content_area.set_margin_bottom(10)
+        content_area.set_margin_start(10)
+        content_area.set_margin_end(10)
+        
+        label = Gtk.Label()
+        label.set_markup(
+            f"<b>Hay una nueva versión disponible!</b>\n\n"
+            f"Versión actual: {CURRENT_VERSION}\n"
+            f"Nueva versión: {latest_version}\n\n"
+            f"¿Desea actualizar ahora?"
+        )
+        content_area.add(label)
+        
+        self.release_url = release_url
+        self.show_all()
 
 class InstalledAppsWindow(Gtk.Window):
     def __init__(self, parent):
@@ -165,7 +223,7 @@ class PackageInstaller(Gtk.Window):
         vbox.pack_start(menu_bar, False, False, 0)
 
         # About menu
-        about_menu = Gtk.MenuItem(label="Acerca de Swift Install v2.0")
+        about_menu = Gtk.MenuItem(label=f"Acerca de Swift Install v{CURRENT_VERSION}")
         menu_bar.append(about_menu)
 
         about_submenu = Gtk.Menu()
@@ -178,6 +236,11 @@ class PackageInstaller(Gtk.Window):
         report_item = Gtk.MenuItem(label="Reportar un error")
         report_item.connect("activate", self.on_report_issue)
         about_submenu.append(report_item)
+
+        # Añadir elemento de menú para comprobar actualizaciones
+        update_item = Gtk.MenuItem(label="Buscar actualizaciones")
+        update_item.connect("activate", self.on_check_updates_clicked)
+        about_submenu.append(update_item)
 
         self.file_chooser = Gtk.FileChooserButton(title="seleccione paquete")
         self.file_chooser.connect("file-set", self.on_file_selected)
@@ -208,11 +271,6 @@ class PackageInstaller(Gtk.Window):
         self.progress_container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         vbox.pack_start(self.progress_container, True, True, 0)
         
-        # Spinner para mostrar durante la desinstalación
-        #self.spinner = Gtk.Spinner()
-        #self.spinner.set_size_request(32, 32)
-        #self.progress_container.pack_start(self.spinner, True, True, 0)
-        
         # Barra de progreso existente
         self.progress_bar = Gtk.ProgressBar()
         self.progress_container.pack_start(self.progress_bar, True, True, 0)
@@ -221,6 +279,82 @@ class PackageInstaller(Gtk.Window):
         vbox.pack_start(self.status_label, True, True, 0)
 
         self.installed_package = None
+        
+        # Comprobar actualizaciones al iniciar la aplicación
+        GLib.timeout_add(500, self.check_updates_on_startup)
+
+    def check_updates_on_startup(self):
+        thread = threading.Thread(target=self.check_updates_thread)
+        thread.daemon = True
+        thread.start()
+        return False  # No repetir el timeout
+    
+    def check_updates_thread(self):
+        update_info = check_for_updates()
+        if update_info:
+            has_update, latest_version, release_url = update_info
+            if has_update:
+                GLib.idle_add(self.show_update_dialog, latest_version, release_url)
+    
+    def show_update_dialog(self, latest_version, release_url):
+        dialog = UpdateDialog(self, latest_version, release_url)
+        response = dialog.run()
+        
+        if response == Gtk.ResponseType.YES:
+            # Abrir la página de la versión en el navegador
+            webbrowser.open(release_url)
+        elif response == Gtk.ResponseType.CANCEL:
+            # El usuario eligió ignorar esta versión - se podría guardar esta preferencia
+            pass
+        # Para la respuesta NO, simplemente cerrar el diálogo y recordar más tarde
+        
+        dialog.destroy()
+        return False
+    
+    def on_check_updates_clicked(self, widget):
+        self.status_label.set_text("Comprobando actualizaciones...")
+        thread = threading.Thread(target=self.manual_check_updates)
+        thread.daemon = True
+        thread.start()
+    
+    def manual_check_updates(self):
+        update_info = check_for_updates()
+        if update_info:
+            has_update, latest_version, release_url = update_info
+            if has_update:
+                GLib.idle_add(self.show_update_dialog, latest_version, release_url)
+            else:
+                GLib.idle_add(self.show_no_updates_message)
+        else:
+            GLib.idle_add(self.show_update_check_error)
+    
+    def show_no_updates_message(self):
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            flags=0,
+            message_type=Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.OK,
+            text="No hay actualizaciones disponibles",
+            secondary_text=f"Estás utilizando la versión más reciente ({CURRENT_VERSION})."
+        )
+        dialog.run()
+        dialog.destroy()
+        self.status_label.set_text("Seleccione un paquete a instalar")
+        return False
+    
+    def show_update_check_error(self):
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            flags=0,
+            message_type=Gtk.MessageType.ERROR,
+            buttons=Gtk.ButtonsType.OK,
+            text="Error al comprobar actualizaciones",
+            secondary_text="No se pudo conectar con el servidor de GitHub. Compruebe su conexión a Internet."
+        )
+        dialog.run()
+        dialog.destroy()
+        self.status_label.set_text("Seleccione un paquete a instalar")
+        return False
 
     def on_file_selected(self, widget):
         self.file_path = widget.get_filename()
@@ -424,4 +558,3 @@ def Component():
     Gtk.main()
 
 Component()
-
