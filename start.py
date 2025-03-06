@@ -10,7 +10,7 @@ from packaging import version
 from gi.repository import Gtk, GLib
 
 # Versión actual de la aplicación
-CURRENT_VERSION = "3.0"  # Cambia esto a la versión actual de tu aplicación
+CURRENT_VERSION = "4.0"  # Cambia esto a la versión actual de tu aplicación
 GITHUB_REPO = "Inled-Group/swiftinstall"
 
 def check_for_updates():
@@ -254,11 +254,6 @@ class PackageInstaller(Gtk.Window):
         self.install_button.set_sensitive(False)
         button_box.pack_start(self.install_button, True, True, 0)
 
-        self.remove_button = Gtk.Button(label="Desinstalar")
-        self.remove_button.connect("clicked", self.on_remove_clicked)
-        self.remove_button.set_sensitive(False)
-        button_box.pack_start(self.remove_button, True, True, 0)
-
         self.fix_deps_button = Gtk.Button(label="Corregir errores")
         self.fix_deps_button.connect("clicked", self.on_fix_deps_clicked)
         button_box.pack_start(self.fix_deps_button, True, True, 0)
@@ -359,12 +354,10 @@ class PackageInstaller(Gtk.Window):
     def on_file_selected(self, widget):
         self.file_path = widget.get_filename()
         self.install_button.set_sensitive(True)
-        self.remove_button.set_sensitive(False)
         self.status_label.set_text(f"Seleccionó: {os.path.basename(self.file_path)}")
 
     def on_install_clicked(self, widget):
         self.install_button.set_sensitive(False)
-        self.remove_button.set_sensitive(False)
         self.fix_deps_button.set_sensitive(False)
         self.apps_button.set_sensitive(False)
         self.file_chooser.set_sensitive(False)
@@ -396,54 +389,14 @@ class PackageInstaller(Gtk.Window):
         thread.daemon = True
         thread.start()
 
-    def on_remove_clicked(self, widget):
-        if not self.installed_package:
-            self.status_label.set_text("No hay paquete a eliminar")
-            return
-
-        self.install_button.set_sensitive(False)
-        self.remove_button.set_sensitive(False)
-        self.fix_deps_button.set_sensitive(False)
-        self.apps_button.set_sensitive(False)
-        self.file_chooser.set_sensitive(False)
-        self.status_label.set_text("Eliminando...")
-        self.progress_bar.set_fraction(0.0)
-
-        file_extension = os.path.splitext(self.installed_package)[1].lower()
-
-        if file_extension == '.deb':
-            package_name = os.path.splitext(os.path.basename(self.installed_package))[0]
-            cmd = ['pkexec', 'dpkg', '-r', package_name]
-        elif file_extension == '.rpm':
-            package_name = os.path.splitext(os.path.basename(self.installed_package))[0]
-            cmd = ['pkexec', 'rpm', '-e', package_name]
-        elif file_extension == '.appimage':
-            cmd = ['rm', self.installed_package]
-        elif file_extension in ('.tar.xz', '.tar.gz', '.tgz'):
-            extract_dir = os.path.expanduser('~/.local')
-            cmd = ['rm', '-rf', os.path.join(extract_dir, os.path.splitext(os.path.basename(self.installed_package))[0])]
-        else:
-            self.status_label.set_text("No puedo eliminar este paquete")
-            self.remove_button.set_sensitive(True)
-            self.file_chooser.set_sensitive(True)
-            self.fix_deps_button.set_sensitive(True)
-            self.apps_button.set_sensitive(True)
-            return
-
-        thread = threading.Thread(target=self.run_removal, args=(cmd,))
-        thread.daemon = True
-        thread.start()
-
     def on_fix_deps_clicked(self, widget):
         self.install_button.set_sensitive(False)
-        self.remove_button.set_sensitive(False)
         self.fix_deps_button.set_sensitive(False)
         self.apps_button.set_sensitive(False)
         self.file_chooser.set_sensitive(False)
         self.status_label.set_text("Corrigiendo errores")
         self.progress_bar.set_fraction(0.0)
-
-        cmd = ['pkexec', 'apt-get', 'install', '-f']
+        cmd = ['pkexec', 'apt-get', 'install', '-f', '-y']
         thread = threading.Thread(target=self.run_fix_deps, args=(cmd,))
         thread.daemon = True
         thread.start()
@@ -473,26 +426,6 @@ class PackageInstaller(Gtk.Window):
         except Exception as e:
             GLib.idle_add(self.installation_complete, f"No hemos podido instalar por esto: {str(e)}")
 
-    def run_removal(self, cmd):
-        try:
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-            
-            while True:
-                output = process.stdout.readline()
-                if output == '' and process.poll() is not None:
-                    break
-                if output:
-                    GLib.idle_add(self.update_progress)
-
-            _, stderr = process.communicate()
-            
-            if process.returncode == 0:
-                self.installed_package = None
-                GLib.idle_add(self.removal_complete, "Eliminado")
-            else:
-                GLib.idle_add(self.removal_complete, f"Con errores en la eliminacion: {stderr}")
-        except Exception as e:
-            GLib.idle_add(self.removal_complete, f"Removal failed: {str(e)}")
 
     def run_fix_deps(self, cmd):
         try:
@@ -523,16 +456,6 @@ class PackageInstaller(Gtk.Window):
         self.status_label.set_text(message)
         self.progress_bar.set_fraction(1.0)
         self.install_button.set_sensitive(False)
-        self.remove_button.set_sensitive(True)
-        self.fix_deps_button.set_sensitive(True)
-        self.apps_button.set_sensitive(True)
-        self.file_chooser.set_sensitive(True)
-
-    def removal_complete(self, message):
-        self.status_label.set_text(message)
-        self.progress_bar.set_fraction(1.0)
-        self.install_button.set_sensitive(True)
-        self.remove_button.set_sensitive(False)
         self.fix_deps_button.set_sensitive(True)
         self.apps_button.set_sensitive(True)
         self.file_chooser.set_sensitive(True)
@@ -541,7 +464,6 @@ class PackageInstaller(Gtk.Window):
         self.status_label.set_text(message)
         self.progress_bar.set_fraction(1.0)
         self.install_button.set_sensitive(True)
-        self.remove_button.set_sensitive(self.installed_package is not None)
         self.fix_deps_button.set_sensitive(True)
         self.apps_button.set_sensitive(True)
         self.file_chooser.set_sensitive(True)
