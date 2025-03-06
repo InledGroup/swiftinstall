@@ -10,7 +10,7 @@ from packaging import version
 from gi.repository import Gtk, GLib
 
 # Versión actual de la aplicación
-CURRENT_VERSION = "3.0"  # Cambia esto a la versión actual de tu aplicación
+CURRENT_VERSION = "4.0"  # Cambia esto a la versión actual de tu aplicación
 GITHUB_REPO = "Inled-Group/swiftinstall"
 
 def check_for_updates():
@@ -98,28 +98,54 @@ class InstalledAppsWindow(Gtk.Window):
         self.load_installed_apps()
     
     def load_installed_apps(self):
-        def add_app(package_name):
+        def add_app(package_name, is_appimage=False):
             row = Gtk.ListBoxRow()
             hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=50)
             row.add(hbox)
-            label = Gtk.Label(label=package_name, xalign=0)
+            
+            # Añadir un prefijo para AppImages para distinguirlos
+            display_name = package_name
+            if is_appimage:
+                display_name = f"[AppImage] {package_name}"
+            
+            label = Gtk.Label(label=display_name, xalign=0)
             hbox.pack_start(label, True, True, 0)
+            
             button = Gtk.Button(label="x")
-            button.connect("clicked", self.on_uninstall_clicked, package_name)
+            button.connect("clicked", self.on_uninstall_clicked, package_name, is_appimage)
             hbox.pack_start(button, False, False, 0)
+            
             self.listbox.add(row)
             row.show_all()
             return False
 
         def load_apps():
             try:
+                # Cargar paquetes instalados
                 output = subprocess.check_output(['dpkg', '--get-selections']).decode('utf-8')
                 for line in output.split('\n'):
                     if line.strip():
                         package_name = line.split()[0]
-                        GLib.idle_add(add_app, package_name)
+                        GLib.idle_add(add_app, package_name, False)
+                
+                # Cargar AppImages instalados (archivos .desktop)
+                desktop_dir = "/usr/share/applications"
+                if os.path.exists(desktop_dir):
+                    for filename in os.listdir(desktop_dir):
+                        if filename.endswith(".desktop"):
+                            # Verificar si es un AppImage creado por SwiftInstall
+                            desktop_path = os.path.join(desktop_dir, filename)
+                            try:
+                                with open(desktop_path, 'r') as f:
+                                    content = f.read()
+                                    # Verificar si el archivo .desktop apunta a un AppImage en /usr/bin
+                                    if "/usr/bin/" in content and "appimage.png" in content:
+                                        app_name = filename.replace(".desktop", "")
+                                        GLib.idle_add(add_app, app_name, True)
+                            except:
+                                pass
             except subprocess.CalledProcessError:
-                label = Gtk.Label(label="No se pudieron recuperar las aplicaciones instaladas")
+                label = Gtk.Label(label="No se pudieron obtener las aplicaciones instaladas")
                 self.listbox.add(label)
             
             return False
@@ -136,29 +162,44 @@ class InstalledAppsWindow(Gtk.Window):
         label = row.get_child().get_children()[0]
         return text in label.get_text().lower()
     
-    def on_uninstall_clicked(self, button, package_name):
+    def on_uninstall_clicked(self, button, package_name, is_appimage=False):
+        if is_appimage:
+            message = f"¿Deseas desinstalar el AppImage {package_name}?"
+        else:
+            message = f"¿Deseas desinstalar {package_name}?"
+            
         dialog = Gtk.MessageDialog(
             transient_for=self,
             flags=0,
             message_type=Gtk.MessageType.QUESTION,
             buttons=Gtk.ButtonsType.YES_NO,
-            text=f"¿Deseas desinstalar {package_name}?"
+            text=message
         )
         response = dialog.run()
         dialog.destroy()
         if response == Gtk.ResponseType.YES:
-            self.uninstall_package(package_name)
+            self.uninstall_package(package_name, is_appimage)
     
-    def uninstall_package(self, package_name):
+    def uninstall_package(self, package_name, is_appimage=False):
         self.progress_bar.set_fraction(0.0)
         self.progress_bar.show()
         
-        cmd = ['pkexec', 'apt-get', 'remove', '-y', package_name]
-        thread = threading.Thread(target=self.run_uninstall, args=(cmd, package_name))
+        if is_appimage:
+            # Eliminar el AppImage y su archivo .desktop
+            cmd = [
+                'pkexec', 'bash', '-c',
+                f'rm -f /usr/bin/{package_name} && ' +
+                f'rm -f /usr/share/applications/{package_name}.desktop'
+            ]
+        else:
+            # Eliminar un paquete normal
+            cmd = ['pkexec', 'apt-get', 'remove', '-y', package_name]
+            
+        thread = threading.Thread(target=self.run_uninstall, args=(cmd, package_name, is_appimage))
         thread.daemon = True
         thread.start()
     
-    def run_uninstall(self, cmd, package_name):
+    def run_uninstall(self, cmd, package_name, is_appimage=False):
         try:
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
             
@@ -172,36 +213,46 @@ class InstalledAppsWindow(Gtk.Window):
             _, stderr = process.communicate()
             
             if process.returncode == 0:
-                GLib.idle_add(self.uninstall_complete, package_name, True)
+                GLib.idle_add(self.uninstall_complete, package_name, True, is_appimage)
             else:
-                GLib.idle_add(self.uninstall_complete, package_name, False, str(stderr))
+                GLib.idle_add(self.uninstall_complete, package_name, False, is_appimage, str(stderr))
         except subprocess.CalledProcessError as e:
-            GLib.idle_add(self.uninstall_complete, package_name, False, str(e))
+            GLib.idle_add(self.uninstall_complete, package_name, False, is_appimage, str(e))
     
     def update_uninstall_progress(self):
         new_value = min(1.0, self.progress_bar.get_fraction() + 0.05)
         self.progress_bar.set_fraction(new_value)
         return False
 
-    def uninstall_complete(self, package_name, success, error_message=None):
+    def uninstall_complete(self, package_name, success, is_appimage=False, error_message=None):
         self.progress_bar.hide()
         self.progress_bar.set_fraction(0.0)
         
         if success:
+            if is_appimage:
+                message = f"{package_name} ha sido desinstalado correctamente."
+            else:
+                message = f"{package_name} ha sido desinstalado correctamente."
+                
             dialog = Gtk.MessageDialog(
                 transient_for=self,
                 flags=0,
                 message_type=Gtk.MessageType.INFO,
                 buttons=Gtk.ButtonsType.OK,
-                text=f"{package_name} ha sido desinstalado correctamente."
+                text=message
             )
         else:
+            if is_appimage:
+                message = f"Error al desinstalar el AppImage {package_name}."
+            else:
+                message = f"Error al desinstalar {package_name}."
+                
             dialog = Gtk.MessageDialog(
                 transient_for=self,
                 flags=0,
                 message_type=Gtk.MessageType.ERROR,
                 buttons=Gtk.ButtonsType.OK,
-                text=f"Error al desinstalar {package_name}.",
+                text=message,
                 secondary_text=error_message
             )
         dialog.run()
@@ -254,11 +305,6 @@ class PackageInstaller(Gtk.Window):
         self.install_button.set_sensitive(False)
         button_box.pack_start(self.install_button, True, True, 0)
 
-        self.remove_button = Gtk.Button(label="Desinstalar")
-        self.remove_button.connect("clicked", self.on_remove_clicked)
-        self.remove_button.set_sensitive(False)
-        button_box.pack_start(self.remove_button, True, True, 0)
-
         self.fix_deps_button = Gtk.Button(label="Corregir errores")
         self.fix_deps_button.connect("clicked", self.on_fix_deps_clicked)
         button_box.pack_start(self.fix_deps_button, True, True, 0)
@@ -282,6 +328,24 @@ class PackageInstaller(Gtk.Window):
         
         # Comprobar actualizaciones al iniciar la aplicación
         GLib.timeout_add(500, self.check_updates_on_startup)
+
+    def create_desktop_file(self, app_name):
+        # Obtener la ruta del icono
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "appimage.png")
+        
+        # Crear el contenido del archivo .desktop
+        desktop_content = f"""[Desktop Entry]
+Type=Application
+Name={app_name}
+Exec=/usr/bin/{app_name}
+Icon={icon_path}
+Terminal=false
+Categories=Utility;
+"""
+        
+        # Comando para crear el archivo .desktop
+        desktop_path = f"/usr/share/applications/{app_name}.desktop"
+        return f"echo '{desktop_content}' > {desktop_path}"
 
     def check_updates_on_startup(self):
         thread = threading.Thread(target=self.check_updates_thread)
@@ -359,12 +423,10 @@ class PackageInstaller(Gtk.Window):
     def on_file_selected(self, widget):
         self.file_path = widget.get_filename()
         self.install_button.set_sensitive(True)
-        self.remove_button.set_sensitive(False)
         self.status_label.set_text(f"Seleccionó: {os.path.basename(self.file_path)}")
 
     def on_install_clicked(self, widget):
         self.install_button.set_sensitive(False)
-        self.remove_button.set_sensitive(False)
         self.fix_deps_button.set_sensitive(False)
         self.apps_button.set_sensitive(False)
         self.file_chooser.set_sensitive(False)
@@ -378,9 +440,19 @@ class PackageInstaller(Gtk.Window):
         elif file_extension == '.rpm':
             cmd = ['pkexec', 'rpm', '-i', self.file_path]
         elif file_extension == '.appimage':
-            cmd = ['chmod', '+x', self.file_path]
-            subprocess.run(cmd)
-            cmd = [self.file_path]
+            # Obtener el nombre del archivo sin extensión
+            app_name = os.path.basename(self.file_path).replace('.appimage', '')
+            
+            # Crear comandos para:
+            # 1. Hacer ejecutable el AppImage
+            # 2. Mover el AppImage a /usr/bin
+            # 3. Crear el archivo .desktop
+            cmd = [
+                'pkexec', 'bash', '-c',
+                f'chmod +x "{self.file_path}" && ' +
+                f'cp "{self.file_path}" /usr/bin/{app_name} && ' +
+                self.create_desktop_file(app_name)
+            ]
         elif file_extension in ('.tar.xz', '.tar.gz', '.tgz'):
             extract_dir = os.path.expanduser('~/.local')
             cmd = ['tar', '-xvf', self.file_path, '-C', extract_dir]
@@ -396,54 +468,15 @@ class PackageInstaller(Gtk.Window):
         thread.daemon = True
         thread.start()
 
-    def on_remove_clicked(self, widget):
-        if not self.installed_package:
-            self.status_label.set_text("No hay paquete a eliminar")
-            return
-
-        self.install_button.set_sensitive(False)
-        self.remove_button.set_sensitive(False)
-        self.fix_deps_button.set_sensitive(False)
-        self.apps_button.set_sensitive(False)
-        self.file_chooser.set_sensitive(False)
-        self.status_label.set_text("Eliminando...")
-        self.progress_bar.set_fraction(0.0)
-
-        file_extension = os.path.splitext(self.installed_package)[1].lower()
-
-        if file_extension == '.deb':
-            package_name = os.path.splitext(os.path.basename(self.installed_package))[0]
-            cmd = ['pkexec', 'dpkg', '-r', package_name]
-        elif file_extension == '.rpm':
-            package_name = os.path.splitext(os.path.basename(self.installed_package))[0]
-            cmd = ['pkexec', 'rpm', '-e', package_name]
-        elif file_extension == '.appimage':
-            cmd = ['rm', self.installed_package]
-        elif file_extension in ('.tar.xz', '.tar.gz', '.tgz'):
-            extract_dir = os.path.expanduser('~/.local')
-            cmd = ['rm', '-rf', os.path.join(extract_dir, os.path.splitext(os.path.basename(self.installed_package))[0])]
-        else:
-            self.status_label.set_text("No puedo eliminar este paquete")
-            self.remove_button.set_sensitive(True)
-            self.file_chooser.set_sensitive(True)
-            self.fix_deps_button.set_sensitive(True)
-            self.apps_button.set_sensitive(True)
-            return
-
-        thread = threading.Thread(target=self.run_removal, args=(cmd,))
-        thread.daemon = True
-        thread.start()
-
     def on_fix_deps_clicked(self, widget):
         self.install_button.set_sensitive(False)
-        self.remove_button.set_sensitive(False)
         self.fix_deps_button.set_sensitive(False)
         self.apps_button.set_sensitive(False)
         self.file_chooser.set_sensitive(False)
         self.status_label.set_text("Corrigiendo errores")
         self.progress_bar.set_fraction(0.0)
 
-        cmd = ['pkexec', 'apt-get', 'install', '-f']
+        cmd = ['pkexec', 'apt-get', 'install', '-f', '-y']
         thread = threading.Thread(target=self.run_fix_deps, args=(cmd,))
         thread.daemon = True
         thread.start()
@@ -467,32 +500,17 @@ class PackageInstaller(Gtk.Window):
             
             if process.returncode == 0:
                 self.installed_package = self.file_path
-                GLib.idle_add(self.installation_complete, "Instalado")
+                
+                # Mensaje especial para AppImage
+                if self.file_path.lower().endswith('.appimage'):
+                    app_name = os.path.basename(self.file_path).replace('.appimage', '')
+                    GLib.idle_add(self.installation_complete, f"AppImage instalado como {app_name}. Se ha creado un acceso directo.")
+                else:
+                    GLib.idle_add(self.installation_complete, "Instalado")
             else:
                 GLib.idle_add(self.installation_complete, f"Hemos tenido unos errores al instalar: {stderr}")
         except Exception as e:
             GLib.idle_add(self.installation_complete, f"No hemos podido instalar por esto: {str(e)}")
-
-    def run_removal(self, cmd):
-        try:
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-            
-            while True:
-                output = process.stdout.readline()
-                if output == '' and process.poll() is not None:
-                    break
-                if output:
-                    GLib.idle_add(self.update_progress)
-
-            _, stderr = process.communicate()
-            
-            if process.returncode == 0:
-                self.installed_package = None
-                GLib.idle_add(self.removal_complete, "Eliminado")
-            else:
-                GLib.idle_add(self.removal_complete, f"Con errores en la eliminacion: {stderr}")
-        except Exception as e:
-            GLib.idle_add(self.removal_complete, f"Removal failed: {str(e)}")
 
     def run_fix_deps(self, cmd):
         try:
@@ -523,16 +541,6 @@ class PackageInstaller(Gtk.Window):
         self.status_label.set_text(message)
         self.progress_bar.set_fraction(1.0)
         self.install_button.set_sensitive(False)
-        self.remove_button.set_sensitive(True)
-        self.fix_deps_button.set_sensitive(True)
-        self.apps_button.set_sensitive(True)
-        self.file_chooser.set_sensitive(True)
-
-    def removal_complete(self, message):
-        self.status_label.set_text(message)
-        self.progress_bar.set_fraction(1.0)
-        self.install_button.set_sensitive(True)
-        self.remove_button.set_sensitive(False)
         self.fix_deps_button.set_sensitive(True)
         self.apps_button.set_sensitive(True)
         self.file_chooser.set_sensitive(True)
@@ -541,7 +549,6 @@ class PackageInstaller(Gtk.Window):
         self.status_label.set_text(message)
         self.progress_bar.set_fraction(1.0)
         self.install_button.set_sensitive(True)
-        self.remove_button.set_sensitive(self.installed_package is not None)
         self.fix_deps_button.set_sensitive(True)
         self.apps_button.set_sensitive(True)
         self.file_chooser.set_sensitive(True)
