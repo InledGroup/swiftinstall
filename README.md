@@ -28,4 +28,6 @@ Y ya estaría desinstalada la aplicación.
    sudo apt update
    sudo apt install -y gir1.2-gtk-3.0 python3-gi pkexec
    ```
+## Vídeos relacionados
+[![Video YT AppImages](https://i.ytimg.com/an_webp/4LWLIn5DmOQ/mqdefault_6s.webp?du=3000&sqp=CPCjtr4G&rs=AOn4CLB_qmrEV9Yk67d9r9e1_PjTnkc66w)](https://www.youtube.com/watch?v=4LWLIn5DmOQ)
 
