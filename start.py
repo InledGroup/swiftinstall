@@ -9,128 +9,28 @@ import requests
 from packaging import version
 
 # Versión actual de la aplicación
-CURRENT_VERSION = "4.0"  # Cambia esto a la versión actual de tu aplicación
+CURRENT_VERSION = "3.0"  # Cambia esto a la versión actual de tu aplicación
 GITHUB_REPO = "Inled-Group/swiftinstall"
 
 # Aplicar CSS para un estilo GNOME moderno
 def load_css():
     css_provider = Gtk.CssProvider()
-    css = """
-    .header-bar {
-        background-color: #ffffff;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
     
-    .main-window {
-        background-color: #f6f5f4;
-    }
-    
-    .action-button {
-        background-color: #ffffff;
-        color: #3584e4;
-        border-radius: 4px;
-        padding: 8px 16px;
-        border: 1px solid #3584e4;
-    }
-    
-    .action-button:hover {
-        background-color: #2a76d2;
-    }
-    
-    .secondary-button {
-        background-color: #ffffff;
-        color: #3584e4;
-        border-radius: 4px;
-        padding: 8px 16px;
-        border: 1px solid #3584e4;
-    }
-    
-    .secondary-button:hover {
-        background-color: #f0f0f0;
-    }
-    
-    .destructive-button {
-        background-color: white;
-        color: #e01b24;
-        border-radius: 4px;
-        padding: 8px 16px;
-        border: none;
-    }
-    
-    .destructive-button:hover {
-        background-color: #c01020;
-    }
-    
-    .card {
-        background-color: white;
-        border-radius: 8px;
-        padding: 16px;
-        margin: 8px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-    
-    .title-label {
-        font-weight: bold;
-        font-size: 16px;
-    }
-    
-    .subtitle-label {
-        color: #5e5c64;
-        font-size: 14px;
-    }
-    
-    .progress-bar trough {
-        background-color: #deddda;
-        border-radius: 4px;
-        min-height: 6px;
-    }
-    
-    .progress-bar progress {
-        background-color: #3584e4;
-        border-radius: 4px;
-        min-height: 6px;
-    }
-    
-    .file-chooser-button {
-        padding: 12px;
-        border-radius: 8px;
-        border: 1px dashed #3584e4;
-        background-color: rgba(53, 132, 228, 0.1);
-    }
-    
-    .file-chooser-button:hover {
-        background-color: rgba(53, 132, 228, 0.2);
-    }
-    
-    .status-label {
-        margin-top: 8px;
-        margin-bottom: 8px;
-    }
-    
-    .list-row {
-        padding: 12px;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    }
-    
-    .search-entry {
-        margin: 8px;
-        padding: 8px;
-        border-radius: 16px;
-    }
-    """
-    css_provider.load_from_data(css.encode())
-    Gtk.StyleContext.add_provider_for_screen(
-        Gdk.Screen.get_default(),
-        css_provider,
-        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-    )
+    # Cargar el CSS desde un archivo externo
+    try:
+        with open("styles.css", "rb") as css_file:
+            css_provider.load_from_data(css_file.read())
+        
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(),
+            css_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+    except Exception as e:
+        print(f"Error al cargar el CSS: {e}")
 
 def check_for_updates():
-    """
-    Comprueba si hay actualizaciones comparando la versión actual con la última versión en GitHub.
-    Devuelve una tupla (hay_actualizacion, ultima_version, url_release) o None si falla
-    """
+   ### Comprueba las actualizaciones conectando con la API de GitHub.
     try:
         response = requests.get(f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest", timeout=5)
         if response.status_code == 200:
@@ -143,7 +43,7 @@ def check_for_updates():
                 return (True, latest_version, release_url)
             return (False, latest_version, release_url)
     except Exception as e:
-        print(f"Error al comprobar actualizaciones: {str(e)}")
+        print(f"Vaya, actualmente no puedo comprobar mis actualizaciones: {str(e)}")
     return None
 
 class UpdateDialog(Gtk.Dialog):
@@ -154,7 +54,6 @@ class UpdateDialog(Gtk.Dialog):
         self.add_buttons(
             "Actualizar ahora", Gtk.ResponseType.YES,
             "Recordar más tarde", Gtk.ResponseType.NO,
-            "Ignorar esta versión", Gtk.ResponseType.CANCEL
         )
         
         self.set_default_size(400, 200)
@@ -172,7 +71,7 @@ class UpdateDialog(Gtk.Dialog):
         
         # Título con formato
         title_label = Gtk.Label()
-        title_label.set_markup("<span size='large' weight='bold'>¡Hay una nueva versión disponible!</span>")
+        title_label.set_markup("<span size='large' weight='bold'>Necesito actualizarme</span>")
         content_area.add(title_label)
         
         # Información de versiones
@@ -192,7 +91,6 @@ class UpdateDialog(Gtk.Dialog):
         self.release_url = release_url
         self.show_all()
         
-        # Estilizar los botones - CORREGIDO: no usar get_action_area()
         action_area = self.get_widget_for_response(Gtk.ResponseType.YES).get_parent()
         for button in action_area.get_children():
             text = button.get_label()
@@ -386,7 +284,7 @@ class InstalledAppsWindow(Gtk.Window):
         vbox.pack_start(label, False, False, 0)
         
         # Etiqueta para el tipo
-        type_label = Gtk.Label(label="AppImage" if is_appimage else "Paquete del sistema", xalign=0)
+        type_label = Gtk.Label(label="AppImage" if is_appimage else "Paquete instalado", xalign=0)
         type_label.get_style_context().add_class("subtitle-label")
         vbox.pack_start(type_label, False, False, 0)
         
@@ -415,7 +313,7 @@ class InstalledAppsWindow(Gtk.Window):
         icon = Gtk.Image.new_from_icon_name("dialog-information-symbolic", Gtk.IconSize.DIALOG)
         box.pack_start(icon, False, True, 8)
         
-        label = Gtk.Label(label="No se encontraron aplicaciones instaladas")
+        label = Gtk.Label(label="No he encontrado aplicaciones instaladas en tu sistema")
         label.get_style_context().add_class("title-label")
         box.pack_start(label, False, True, 8)
         
@@ -440,7 +338,7 @@ class InstalledAppsWindow(Gtk.Window):
         icon = Gtk.Image.new_from_icon_name("dialog-error-symbolic", Gtk.IconSize.DIALOG)
         box.pack_start(icon, False, True, 8)
         
-        label = Gtk.Label(label="No se pudieron obtener las aplicaciones instaladas")
+        label = Gtk.Label(label="No he podido encontrar aplicaciones instaladas en tu sistema")
         label.get_style_context().add_class("title-label")
         box.pack_start(label, False, True, 8)
         
@@ -470,7 +368,7 @@ class InstalledAppsWindow(Gtk.Window):
     
     def on_uninstall_clicked(self, button, package_name, is_appimage=False):
         if is_appimage:
-            message = f"¿Deseas desinstalar el AppImage {package_name}?"
+            message = f"¿Deseas desinstalar {package_name}?"
         else:
             message = f"¿Deseas desinstalar {package_name}?"
             
@@ -556,7 +454,7 @@ class InstalledAppsWindow(Gtk.Window):
         
         if success:
             if is_appimage:
-                message = f"{package_name} ha sido desinstalado correctamente."
+                message = f"{package_name} ha sido desinstalado correctamente. Recuerda borrar los archivos que haya creado la aplicación."
             else:
                 message = f"{package_name} ha sido desinstalado correctamente."
                 
@@ -570,7 +468,7 @@ class InstalledAppsWindow(Gtk.Window):
             self.status_label.set_text("Desinstalación completada")
         else:
             if is_appimage:
-                message = f"Error al desinstalar el AppImage {package_name}."
+                message = f"Error al desinstalar Swiftinstall Enhance AppImage - {package_name}."
             else:
                 message = f"Error al desinstalar {package_name}."
                 
@@ -582,7 +480,7 @@ class InstalledAppsWindow(Gtk.Window):
                 text=message,
                 secondary_text=error_message
             )
-            self.status_label.set_text("Error en la desinstalación")
+            self.status_label.set_text("Uy... ha habido un error cuando estaba desinstalándote la app")
         
         # Estilizar el diálogo
         dialog.set_default_size(350, 150)
@@ -663,7 +561,7 @@ class PackageInstaller(Gtk.Window):
         icon = Gtk.Image.new_from_icon_name("package-x-generic-symbolic", Gtk.IconSize.LARGE_TOOLBAR)
         title_box.pack_start(icon, False, False, 0)
         
-        title_label = Gtk.Label(label="Seleccionar paquete para instalar")
+        title_label = Gtk.Label(label="¿Qué debo instalar?")
         title_label.get_style_context().add_class("title-label")
         title_box.pack_start(title_label, False, False, 0)
         
@@ -676,7 +574,7 @@ class PackageInstaller(Gtk.Window):
         file_icon = Gtk.Image.new_from_icon_name("document-open-symbolic", Gtk.IconSize.DIALOG)
         file_chooser_box.pack_start(file_icon, True, True, 8)
         
-        file_label = Gtk.Label(label="Haga clic para seleccionar un archivo")
+        file_label = Gtk.Label(label="Selecciona el archivo que debo instalar")
         file_label.get_style_context().add_class("subtitle-label")
         file_chooser_box.pack_start(file_label, False, False, 8)
         
@@ -687,7 +585,7 @@ class PackageInstaller(Gtk.Window):
         file_section.pack_start(file_chooser_button, True, True, 0)
         
         # Etiqueta para mostrar el archivo seleccionado
-        self.selected_file_label = Gtk.Label(label="Ningún archivo seleccionado")
+        self.selected_file_label = Gtk.Label(label="Aún no has seleccionado ningún archivo")
         self.selected_file_label.get_style_context().add_class("subtitle-label")
         file_section.pack_start(self.selected_file_label, False, False, 0)
         
@@ -773,7 +671,7 @@ class PackageInstaller(Gtk.Window):
         progress_section.pack_start(self.progress_bar, False, False, 0)
         
         # Etiqueta de estado
-        self.status_label = Gtk.Label(label="Seleccione un paquete a instalar")
+        self.status_label = Gtk.Label(label="Empieza seleccionando un archivo que contenga una app")
         self.status_label.get_style_context().add_class("status-label")
         progress_section.pack_start(self.status_label, False, False, 0)
         
@@ -829,7 +727,7 @@ class PackageInstaller(Gtk.Window):
             self.file_path = dialog.get_filename()
             self.selected_file_label.set_text(f"Archivo seleccionado: {os.path.basename(self.file_path)}")
             self.install_button.set_sensitive(True)
-            self.status_label.set_text(f"Listo para instalar: {os.path.basename(self.file_path)}")
+            self.status_label.set_text(f"Estoy listo para instalar: {os.path.basename(self.file_path)}")
         
         dialog.destroy()
 
@@ -880,7 +778,7 @@ Categories=Utility;
         return False
     
     def on_check_updates_clicked(self, widget):
-        self.status_label.set_text("Comprobando actualizaciones...")
+        self.status_label.set_text("Estoy comprobando las actualizaciones")
         thread = threading.Thread(target=self.manual_check_updates)
         thread.daemon = True
         thread.start()
@@ -902,12 +800,12 @@ Categories=Utility;
             flags=0,
             message_type=Gtk.MessageType.INFO,
             buttons=Gtk.ButtonsType.OK,
-            text="No hay actualizaciones disponibles",
-            secondary_text=f"Estás utilizando la versión más reciente ({CURRENT_VERSION})."
+            text="Estoy actualizado :)",
+            secondary_text=f"Bien hecho, estoy actualizado a la última versión ({CURRENT_VERSION})."
         )
         dialog.run()
         dialog.destroy()
-        self.status_label.set_text("Seleccione un paquete a instalar")
+        self.status_label.set_text("Empieza seleccionando un archivo que contenga una app")
         return False
     
     def show_update_check_error(self):
@@ -916,12 +814,12 @@ Categories=Utility;
             flags=0,
             message_type=Gtk.MessageType.ERROR,
             buttons=Gtk.ButtonsType.OK,
-            text="Error al comprobar actualizaciones",
-            secondary_text="No se pudo conectar con el servidor de GitHub. Compruebe su conexión a Internet."
+            text="He encontrado un error",
+            secondary_text="Vaya, no he podido comprobar las actualizaciones. ¿Estás conectado a internet?"
         )
         dialog.run()
         dialog.destroy()
-        self.status_label.set_text("Seleccione un paquete a instalar")
+        self.status_label.set_text("Empieza seleccionando un archivo que contenga una app")
         return False
 
     def on_install_clicked(self, widget):
@@ -1005,9 +903,9 @@ Categories=Utility;
                     app_name = os.path.basename(self.file_path).replace('.appimage', '')
                     GLib.idle_add(self.installation_complete, f"AppImage instalado como {app_name}. Se ha creado un acceso directo.")
                 else:
-                    GLib.idle_add(self.installation_complete, "Instalación completada con éxito")
+                    GLib.idle_add(self.installation_complete, "He instalado todo bien, ¡disfrútala!")
             else:
-                GLib.idle_add(self.installation_complete, f"Error al instalar: {stderr}", True)
+                GLib.idle_add(self.installation_complete, f"Vaya, he encontrado un error al instalar: {stderr}", True)
         except Exception as e:
             GLib.idle_add(self.installation_complete, f"Error en la instalación: {str(e)}", True)
 
@@ -1025,9 +923,9 @@ Categories=Utility;
             _, stderr = process.communicate()
             
             if process.returncode == 0:
-                GLib.idle_add(self.fix_deps_complete, "Dependencias corregidas correctamente")
+                GLib.idle_add(self.fix_deps_complete, "He arreglado las dependencias")
             else:
-                GLib.idle_add(self.fix_deps_complete, f"Error al corregir dependencias: {stderr}", True)
+                GLib.idle_add(self.fix_deps_complete, f"Vaya, un error al corregir dependencias: {stderr}", True)
         except Exception as e:
             GLib.idle_add(self.fix_deps_complete, f"Error al corregir dependencias: {str(e)}", True)
 
@@ -1046,7 +944,7 @@ Categories=Utility;
                 flags=0,
                 message_type=Gtk.MessageType.ERROR,
                 buttons=Gtk.ButtonsType.OK,
-                text="Error en la instalación",
+                text="¡Un error en la instalación!",
                 secondary_text=message
             )
         else:
@@ -1055,7 +953,7 @@ Categories=Utility;
                 flags=0,
                 message_type=Gtk.MessageType.INFO,
                 buttons=Gtk.ButtonsType.OK,
-                text="Instalación completada",
+                text="He terminado la instalación",
                 secondary_text=message
             )
         
@@ -1076,7 +974,7 @@ Categories=Utility;
                 flags=0,
                 message_type=Gtk.MessageType.ERROR,
                 buttons=Gtk.ButtonsType.OK,
-                text="Error al corregir dependencias",
+                text="¡Un error al corregir las dependencias!",
                 secondary_text=message
             )
         else:
@@ -1085,7 +983,7 @@ Categories=Utility;
                 flags=0,
                 message_type=Gtk.MessageType.INFO,
                 buttons=Gtk.ButtonsType.OK,
-                text="Dependencias corregidas",
+                text="He corregido las dependencias",
                 secondary_text=message
             )
         
@@ -1109,7 +1007,7 @@ Categories=Utility;
         
         about_dialog.set_program_name("Swift Install")
         about_dialog.set_version(CURRENT_VERSION)
-        about_dialog.set_comments("El instalador de paquetes gráfico de Linux")
+        about_dialog.set_comments("Soy un instalador de paquetes gráfico para Linux. Espero que disfrutes usándome")
         about_dialog.set_license_type(Gtk.License.GPL_3_0)
         about_dialog.set_website("https://inled.es")
         about_dialog.set_website_label("inled.es")
