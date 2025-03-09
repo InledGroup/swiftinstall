@@ -9,8 +9,122 @@ import requests
 from packaging import version
 
 # Versión actual de la aplicación
-CURRENT_VERSION = "5.0"  # Cambia esto a la versión actual de tu aplicación
+CURRENT_VERSION = "4.0"  # Cambia esto a la versión actual de tu aplicación
 GITHUB_REPO = "Inled-Group/swiftinstall"
+
+# Aplicar CSS para un estilo GNOME moderno
+def load_css():
+    css_provider = Gtk.CssProvider()
+    css = """
+    .header-bar {
+        background-color: #ffffff;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    .main-window {
+        background-color: #f6f5f4;
+    }
+    
+    .action-button {
+        background-color: #ffffff;
+        color: #3584e4;
+        border-radius: 4px;
+        padding: 8px 16px;
+        border: 1px solid #3584e4;
+    }
+    
+    .action-button:hover {
+        background-color: #2a76d2;
+    }
+    
+    .secondary-button {
+        background-color: #ffffff;
+        color: #3584e4;
+        border-radius: 4px;
+        padding: 8px 16px;
+        border: 1px solid #3584e4;
+    }
+    
+    .secondary-button:hover {
+        background-color: #f0f0f0;
+    }
+    
+    .destructive-button {
+        background-color: white;
+        color: #e01b24;
+        border-radius: 4px;
+        padding: 8px 16px;
+        border: none;
+    }
+    
+    .destructive-button:hover {
+        background-color: #c01020;
+    }
+    
+    .card {
+        background-color: white;
+        border-radius: 8px;
+        padding: 16px;
+        margin: 8px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    .title-label {
+        font-weight: bold;
+        font-size: 16px;
+    }
+    
+    .subtitle-label {
+        color: #5e5c64;
+        font-size: 14px;
+    }
+    
+    .progress-bar trough {
+        background-color: #deddda;
+        border-radius: 4px;
+        min-height: 6px;
+    }
+    
+    .progress-bar progress {
+        background-color: #3584e4;
+        border-radius: 4px;
+        min-height: 6px;
+    }
+    
+    .file-chooser-button {
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px dashed #3584e4;
+        background-color: rgba(53, 132, 228, 0.1);
+    }
+    
+    .file-chooser-button:hover {
+        background-color: rgba(53, 132, 228, 0.2);
+    }
+    
+    .status-label {
+        margin-top: 8px;
+        margin-bottom: 8px;
+    }
+    
+    .list-row {
+        padding: 12px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .search-entry {
+        margin: 8px;
+        padding: 8px;
+        border-radius: 16px;
+    }
+    """
+    css_provider.load_from_data(css.encode())
+    Gtk.StyleContext.add_provider_for_screen(
+        Gdk.Screen.get_default(),
+        css_provider,
+        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+    )
 
 def check_for_updates():
     """
@@ -43,224 +157,297 @@ class UpdateDialog(Gtk.Dialog):
             "Ignorar esta versión", Gtk.ResponseType.CANCEL
         )
         
-        self.set_default_size(400, 180)
+        self.set_default_size(400, 200)
         
         content_area = self.get_content_area()
-        content_area.set_spacing(12)
+        content_area.set_spacing(20)
         content_area.set_margin_top(24)
         content_area.set_margin_bottom(24)
         content_area.set_margin_start(24)
         content_area.set_margin_end(24)
         
-        # Título con estilo Gnome
+        # Icono de actualización
+        icon = Gtk.Image.new_from_icon_name("software-update-available", Gtk.IconSize.DIALOG)
+        content_area.add(icon)
+        
+        # Título con formato
         title_label = Gtk.Label()
-        title_label.set_markup("<span font_weight='bold' font_size='large'>Actualización disponible</span>")
-        title_label.set_halign(Gtk.Align.START)
+        title_label.set_markup("<span size='large' weight='bold'>¡Hay una nueva versión disponible!</span>")
         content_area.add(title_label)
         
-        # Separador sutil
-        separator = Gtk.Separator()
-        separator.set_margin_top(12)
-        separator.set_margin_bottom(12)
-        content_area.add(separator)
+        # Información de versiones
+        version_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        version_box.set_margin_top(12)
         
-        # Contenido
-        info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        info_box.set_margin_start(6)
+        current_version_label = Gtk.Label()
+        current_version_label.set_markup(f"Versión actual: <b>{CURRENT_VERSION}</b>")
+        version_box.add(current_version_label)
         
-        version_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        current_label = Gtk.Label(label="Versión actual:")
-        current_label.set_halign(Gtk.Align.START)
-        current_version_label = Gtk.Label(label=CURRENT_VERSION)
-        current_version_label.set_halign(Gtk.Align.START)
-        version_box.pack_start(current_label, False, False, 0)
-        version_box.pack_start(current_version_label, False, False, 0)
+        new_version_label = Gtk.Label()
+        new_version_label.set_markup(f"Nueva versión: <b>{latest_version}</b>")
+        version_box.add(new_version_label)
         
-        new_version_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        new_label = Gtk.Label(label="Nueva versión:")
-        new_label.set_halign(Gtk.Align.START)
-        new_version_label = Gtk.Label(label=latest_version)
-        new_version_label.set_halign(Gtk.Align.START)
-        new_version_box.pack_start(new_label, False, False, 0)
-        new_version_box.pack_start(new_version_label, False, False, 0)
-        
-        info_box.add(version_box)
-        info_box.add(new_version_box)
-        
-        question_label = Gtk.Label(label="¿Desea actualizar ahora?")
-        question_label.set_margin_top(12)
-        question_label.set_halign(Gtk.Align.START)
-        
-        content_area.add(info_box)
-        content_area.add(question_label)
+        content_area.add(version_box)
         
         self.release_url = release_url
         self.show_all()
+        
+        # Estilizar los botones - CORREGIDO: no usar get_action_area()
+        action_area = self.get_widget_for_response(Gtk.ResponseType.YES).get_parent()
+        for button in action_area.get_children():
+            text = button.get_label()
+            if text == "Actualizar ahora":
+                button.get_style_context().add_class("action-button")
+            elif text == "Ignorar esta versión":
+                button.get_style_context().add_class("secondary-button")
 
 class InstalledAppsWindow(Gtk.Window):
     def __init__(self, parent):
-        Gtk.Window.__init__(self, title="Eliminar aplicaciones")
+        Gtk.Window.__init__(self, title="Aplicaciones instaladas")
         self.set_default_size(500, 400)
         self.set_transient_for(parent)
         self.set_modal(True)
-        
-        # Estilo Gnome: Usar HeaderBar en lugar de título normal
-        headerbar = Gtk.HeaderBar()
-        headerbar.set_show_close_button(True)
-        headerbar.set_title("Eliminar aplicaciones")
-        headerbar.set_subtitle("Elimina las aplicaciones instaladas en tu sistema")
-        self.set_titlebar(headerbar)
-        
-        # Botón de actualizar en la HeaderBar
-        refresh_button = Gtk.Button()
-        refresh_icon = Gio.ThemedIcon(name="view-refresh-symbolic")
-        refresh_image = Gtk.Image.new_from_gicon(refresh_icon, Gtk.IconSize.BUTTON)
-        refresh_button.add(refresh_image)
-        refresh_button.set_tooltip_text("Actualizar lista")
-        refresh_button.connect("clicked", self.on_refresh_clicked)
-        headerbar.pack_end(refresh_button)
+        self.get_style_context().add_class("main-window")
+
+        # Header bar al estilo GNOME
+        header_bar = Gtk.HeaderBar()
+        header_bar.set_show_close_button(True)
+        header_bar.set_title("Aplicaciones instaladas")
+        header_bar.get_style_context().add_class("header-bar")
+        self.set_titlebar(header_bar)
 
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        main_box.set_margin_top(18)
-        main_box.set_margin_bottom(18)
-        main_box.set_margin_start(18)
-        main_box.set_margin_end(18)
+        main_box.set_margin_top(16)
+        main_box.set_margin_bottom(16)
+        main_box.set_margin_start(16)
+        main_box.set_margin_end(16)
         self.add(main_box)
 
-        # Búsqueda con estilo Gnome
-        search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        # Barra de búsqueda con icono
+        search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         search_icon = Gtk.Image.new_from_icon_name("system-search-symbolic", Gtk.IconSize.MENU)
+        search_box.pack_start(search_icon, False, False, 8)
+        
         self.search_entry = Gtk.SearchEntry()
         self.search_entry.set_placeholder_text("Buscar aplicaciones...")
         self.search_entry.connect("search-changed", self.on_search_changed)
-        search_box.pack_start(search_icon, False, False, 0)
+        self.search_entry.get_style_context().add_class("search-entry")
         search_box.pack_start(self.search_entry, True, True, 0)
+        
         main_box.pack_start(search_box, False, False, 0)
 
-        # Separador sutil
-        separator = Gtk.Separator()
-        separator.set_margin_top(6)
-        separator.set_margin_bottom(6)
-        main_box.pack_start(separator, False, False, 0)
+        # Tarjeta para la lista de aplicaciones
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        card.get_style_context().add_class("card")
+        main_box.pack_start(card, True, True, 0)
 
-        # Lista de aplicaciones con estilo Gnome
         scrolled_window = Gtk.ScrolledWindow()
         scrolled_window.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scrolled_window.set_shadow_type(Gtk.ShadowType.IN)
+        scrolled_window.set_min_content_height(300)
+        card.pack_start(scrolled_window, True, True, 0)
 
         self.listbox = Gtk.ListBox()
         self.listbox.set_selection_mode(Gtk.SelectionMode.NONE)
         self.listbox.set_filter_func(self.filter_func)
-        
         scrolled_window.add(self.listbox)
-
-        self.overlay = Gtk.Overlay()
-        self.overlay.add(scrolled_window)
-        main_box.pack_start(self.overlay, True, True, 0)
-
-        # Barra de progreso con estilo Gnome
+        
+        # Barra de progreso
+        progress_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        progress_box.set_margin_top(16)
+        
         self.progress_bar = Gtk.ProgressBar()
-        self.progress_bar.set_margin_top(12)
-        main_box.pack_start(self.progress_bar, False, False, 0)
+        self.progress_bar.get_style_context().add_class("progress-bar")
+        progress_box.pack_start(self.progress_bar, False, False, 0)
+        
+        main_box.pack_start(progress_box, False, False, 0)
         self.progress_bar.hide()
 
-        self.load_installed_apps()
-    
-    def on_refresh_clicked(self, button):
-        # Limpiar la lista actual
-        for child in self.listbox.get_children():
-            self.listbox.remove(child)
-        # Recargar las aplicaciones
+        # Mensaje de estado
+        self.status_label = Gtk.Label(label="")
+        self.status_label.get_style_context().add_class("status-label")
+        main_box.pack_start(self.status_label, False, False, 0)
+        
+        # Cargar aplicaciones
         self.load_installed_apps()
     
     def load_installed_apps(self):
-        def add_app(package_name, is_appimage=False):
-            row = Gtk.ListBoxRow()
-            hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-            hbox.set_margin_start(6)
-            hbox.set_margin_end(6)
-            hbox.set_margin_top(6)
-            hbox.set_margin_bottom(6)
-            row.add(hbox)
+        # Limpiar la lista actual
+        for child in self.listbox.get_children():
+            self.listbox.remove(child)
             
-            # Icono para el tipo de aplicación
-            icon_name = "package-x-generic-symbolic" if not is_appimage else "application-x-executable-symbolic"
-            app_icon = Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.LARGE_TOOLBAR)
-            hbox.pack_start(app_icon, False, False, 0)
+        # Mostrar un spinner mientras se cargan las aplicaciones
+        spinner = Gtk.Spinner()
+        spinner.start()
+        spinner_row = Gtk.ListBoxRow()
+        spinner_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        spinner_box.set_margin_top(12)
+        spinner_box.set_margin_bottom(12)
+        spinner_box.pack_start(spinner, True, True, 0)
+        spinner_row.add(spinner_box)
+        self.listbox.add(spinner_row)
+        self.listbox.show_all()
+        
+        # Iniciar un hilo para cargar las aplicaciones
+        thread = threading.Thread(target=self.load_apps_thread)
+        thread.daemon = True
+        thread.start()
+    
+    def load_apps_thread(self):
+        try:
+            # Obtener paquetes instalados
+            packages = []
+            appimages = []
             
-            # Añadir un prefijo para AppImages para distinguirlos
-            display_name = package_name
-            if is_appimage:
-                display_name = f"{package_name}"
-                
-            # Contenedor vertical para nombre y etiqueta
-            vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            
-            label = Gtk.Label(label=display_name, xalign=0)
-            label.set_halign(Gtk.Align.START)
-            vbox.pack_start(label, False, False, 0)
-            
-            # Etiqueta para el tipo
-            type_label = Gtk.Label(xalign=0)
-            type_label.set_markup(f"<span size='small' foreground='#888888'>{('AppImage' if is_appimage else 'Paquete')}</span>")
-            vbox.pack_start(type_label, False, False, 0)
-            
-            hbox.pack_start(vbox, True, True, 0)
-            
-            # Botón de desinstalar con estilo Gnome
-            button = Gtk.Button()
-            button.set_tooltip_text("Desinstalar")
-            trash_icon = Gio.ThemedIcon(name="user-trash-symbolic")
-            trash_image = Gtk.Image.new_from_gicon(trash_icon, Gtk.IconSize.BUTTON)
-            button.add(trash_image)
-            button.get_style_context().add_class("destructive-action")
-            button.connect("clicked", self.on_uninstall_clicked, package_name, is_appimage)
-            hbox.pack_end(button, False, False, 0)
-            
-            self.listbox.add(row)
-            row.show_all()
-            return False
-
-        def load_apps():
+            # Obtener paquetes del sistema
             try:
-                # Cargar paquetes instalados
-                output = subprocess.check_output(['dpkg', '--get-selections']).decode('utf-8')
-                for line in output.split('\n'):
-                    if line.strip():
-                        package_name = line.split()[0]
-                        GLib.idle_add(add_app, package_name, False)
-                
-                # Cargar AppImages instalados (archivos .desktop)
-                desktop_dir = "/usr/share/applications"
-                if os.path.exists(desktop_dir):
-                    for filename in os.listdir(desktop_dir):
-                        if filename.endswith(".desktop"):
-                            # Verificar si es un AppImage creado por SwiftInstall
-                            desktop_path = os.path.join(desktop_dir, filename)
-                            try:
-                                with open(desktop_path, 'r') as f:
-                                    content = f.read()
-                                    # Verificar si el archivo .desktop apunta a un AppImage en /usr/bin
-                                    if "/usr/bin/" in content and "appimage.png" in content:
-                                        app_name = filename.replace(".desktop", "")
-                                        GLib.idle_add(add_app, app_name, True)
-                            except:
-                                pass
-            except subprocess.CalledProcessError:
-                # Mensaje de error con estilo Gnome
-                info_bar = Gtk.InfoBar()
-                info_bar.set_message_type(Gtk.MessageType.ERROR)
-                
-                content = info_bar.get_content_area()
-                label = Gtk.Label(label="No se pudieron obtener las aplicaciones instaladas")
-                content.add(label)
-                
-                self.listbox.add(info_bar)
-                info_bar.show_all()
+                output = subprocess.check_output(['dpkg', '--get-selections'], 
+                                               timeout=10).decode('utf-8')
+                packages = [line.split()[0] for line in output.split('\n') if line.strip()]
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+                print(f"Error al obtener paquetes: {e}")
             
-            return False
-
-        GLib.idle_add(load_apps)
+            # Obtener AppImages
+            desktop_dir = "/usr/share/applications"
+            if os.path.exists(desktop_dir):
+                for filename in os.listdir(desktop_dir):
+                    if filename.endswith(".desktop"):
+                        desktop_path = os.path.join(desktop_dir, filename)
+                        try:
+                            with open(desktop_path, 'r') as f:
+                                content = f.read()
+                                if "/usr/bin/" in content and "appimage.png" in content:
+                                    app_name = filename.replace(".desktop", "")
+                                    appimages.append(app_name)
+                        except:
+                            pass
+            
+            # Actualizar la UI en lotes para evitar sobrecargar el bucle principal
+            def update_ui_with_packages():
+                # Eliminar el spinner
+                for child in self.listbox.get_children():
+                    if isinstance(child.get_child(), Gtk.Box) and \
+                       isinstance(child.get_child().get_children()[0], Gtk.Spinner):
+                        self.listbox.remove(child)
+                        break
+                
+                # Añadir paquetes en lotes
+                batch_size = 50
+                for i in range(0, len(packages), batch_size):
+                    batch = packages[i:i+batch_size]
+                    for package_name in batch:
+                        self.add_app_to_list(package_name, False)
+                    
+                    # Permitir que la UI se actualice entre lotes
+                    while Gtk.events_pending():
+                        Gtk.main_iteration()
+                
+                # Añadir AppImages
+                for app_name in appimages:
+                    self.add_app_to_list(app_name, True)
+                
+                # Mostrar mensaje si no se encontraron aplicaciones
+                if not packages and not appimages:
+                    self.show_no_apps_message()
+                
+                return False
+            
+            # Programar la actualización de la UI en el hilo principal
+            GLib.idle_add(update_ui_with_packages)
+            
+        except Exception as e:
+            print(f"Error al cargar aplicaciones: {e}")
+            GLib.idle_add(self.show_error_message)
+    
+    def add_app_to_list(self, package_name, is_appimage=False):
+        """Añadir una aplicación a la lista"""
+        row = Gtk.ListBoxRow()
+        row.get_style_context().add_class("list-row")
+        
+        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        hbox.set_margin_top(8)
+        hbox.set_margin_bottom(8)
+        hbox.set_margin_start(8)
+        hbox.set_margin_end(8)
+        row.add(hbox)
+        
+        # Icono para el tipo de aplicación
+        icon_name = "package-x-generic" if not is_appimage else "application-x-executable"
+        icon = Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.LARGE_TOOLBAR)
+        hbox.pack_start(icon, False, False, 0)
+        
+        # Nombre a mostrar
+        display_name = package_name
+        
+        # Contenedor vertical para nombre y tipo
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        
+        label = Gtk.Label(label=display_name, xalign=0)
+        label.get_style_context().add_class("title-label")
+        vbox.pack_start(label, False, False, 0)
+        
+        # Etiqueta para el tipo
+        type_label = Gtk.Label(label="AppImage" if is_appimage else "Paquete del sistema", xalign=0)
+        type_label.get_style_context().add_class("subtitle-label")
+        vbox.pack_start(type_label, False, False, 0)
+        
+        hbox.pack_start(vbox, True, True, 0)
+        
+        # Botón de desinstalar con icono
+        button = Gtk.Button()
+        button.set_tooltip_text("Desinstalar")
+        button.get_style_context().add_class("destructive-button")
+        
+        button_icon = Gtk.Image.new_from_icon_name("user-trash-symbolic", Gtk.IconSize.BUTTON)
+        button.add(button_icon)
+        
+        button.connect("clicked", self.on_uninstall_clicked, package_name, is_appimage)
+        hbox.pack_start(button, False, False, 0)
+        
+        self.listbox.add(row)
+        row.show_all()
+    
+    def show_no_apps_message(self):
+        row = Gtk.ListBoxRow()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_top(24)
+        box.set_margin_bottom(24)
+        
+        icon = Gtk.Image.new_from_icon_name("dialog-information-symbolic", Gtk.IconSize.DIALOG)
+        box.pack_start(icon, False, True, 8)
+        
+        label = Gtk.Label(label="No se encontraron aplicaciones instaladas")
+        label.get_style_context().add_class("title-label")
+        box.pack_start(label, False, True, 8)
+        
+        row.add(box)
+        self.listbox.add(row)
+        row.show_all()
+        return False
+    
+    def show_error_message(self):
+        # Eliminar el spinner si existe
+        for child in self.listbox.get_children():
+            if isinstance(child.get_child(), Gtk.Box) and \
+               isinstance(child.get_child().get_children()[0], Gtk.Spinner):
+                self.listbox.remove(child)
+                break
+        
+        row = Gtk.ListBoxRow()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_top(24)
+        box.set_margin_bottom(24)
+        
+        icon = Gtk.Image.new_from_icon_name("dialog-error-symbolic", Gtk.IconSize.DIALOG)
+        box.pack_start(icon, False, True, 8)
+        
+        label = Gtk.Label(label="No se pudieron obtener las aplicaciones instaladas")
+        label.get_style_context().add_class("title-label")
+        box.pack_start(label, False, True, 8)
+        
+        row.add(box)
+        self.listbox.add(row)
+        row.show_all()
+        return False
     
     def on_search_changed(self, entry):
         self.listbox.invalidate_filter()
@@ -270,23 +457,18 @@ class InstalledAppsWindow(Gtk.Window):
         if not text:
             return True
         
-        # Obtener el label del nombre de la aplicación (primer hijo del vbox)
-        hbox = row.get_child()
-        if not hbox or not isinstance(hbox, Gtk.Box):
-            return False
-            
-        for child in hbox.get_children():
-            if isinstance(child, Gtk.Box) and child.get_orientation() == Gtk.Orientation.VERTICAL:
-                vbox = child
-                if vbox.get_children():
-                    label = vbox.get_children()[0]
-                    if isinstance(label, Gtk.Label):
-                        return text in label.get_text().lower()
-        
+        # Buscar en el título de la aplicación
+        box = row.get_child()
+        if box and isinstance(box, Gtk.Box):
+            for child in box.get_children():
+                if isinstance(child, Gtk.Box) and child.get_orientation() == Gtk.Orientation.VERTICAL:
+                    for label in child.get_children():
+                        if isinstance(label, Gtk.Label) and hasattr(label, 'get_text'):
+                            if text in label.get_text().lower():
+                                return True
         return False
     
     def on_uninstall_clicked(self, button, package_name, is_appimage=False):
-        # Diálogo de confirmación con estilo Gnome
         if is_appimage:
             message = f"¿Deseas desinstalar el AppImage {package_name}?"
         else:
@@ -296,13 +478,27 @@ class InstalledAppsWindow(Gtk.Window):
             transient_for=self,
             flags=0,
             message_type=Gtk.MessageType.QUESTION,
-            buttons=Gtk.ButtonsType.NONE,
+            buttons=Gtk.ButtonsType.YES_NO,
             text=message
         )
         
-        dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
-        delete_button = dialog.add_button("Desinstalar", Gtk.ResponseType.YES)
-        delete_button.get_style_context().add_class("destructive-action")
+        # Estilizar el diálogo
+        dialog.set_default_size(350, 150)
+        content_area = dialog.get_content_area()
+        content_area.set_spacing(12)
+        content_area.set_margin_top(20)
+        content_area.set_margin_bottom(20)
+        content_area.set_margin_start(20)
+        content_area.set_margin_end(20)
+        
+        # Estilizar los botones - CORREGIDO: no usar get_action_area()
+        action_area = dialog.get_widget_for_response(Gtk.ResponseType.YES).get_parent()
+        for button in action_area.get_children():
+            text = button.get_label()
+            if text == "Sí":
+                button.get_style_context().add_class("destructive-button")
+            elif text == "No":
+                button.get_style_context().add_class("secondary-button")
         
         response = dialog.run()
         dialog.destroy()
@@ -312,6 +508,7 @@ class InstalledAppsWindow(Gtk.Window):
     def uninstall_package(self, package_name, is_appimage=False):
         self.progress_bar.set_fraction(0.0)
         self.progress_bar.show()
+        self.status_label.set_text(f"Desinstalando {package_name}...")
         
         if is_appimage:
             # Eliminar el AppImage y su archivo .desktop
@@ -357,7 +554,6 @@ class InstalledAppsWindow(Gtk.Window):
         self.progress_bar.hide()
         self.progress_bar.set_fraction(0.0)
         
-        # Diálogo de resultado con estilo Gnome
         if success:
             if is_appimage:
                 message = f"{package_name} ha sido desinstalado correctamente."
@@ -371,9 +567,10 @@ class InstalledAppsWindow(Gtk.Window):
                 buttons=Gtk.ButtonsType.OK,
                 text=message
             )
+            self.status_label.set_text("Desinstalación completada")
         else:
             if is_appimage:
-                message = f"Error al desinstalar {package_name}."
+                message = f"Error al desinstalar el AppImage {package_name}."
             else:
                 message = f"Error al desinstalar {package_name}."
                 
@@ -385,6 +582,17 @@ class InstalledAppsWindow(Gtk.Window):
                 text=message,
                 secondary_text=error_message
             )
+            self.status_label.set_text("Error en la desinstalación")
+        
+        # Estilizar el diálogo
+        dialog.set_default_size(350, 150)
+        content_area = dialog.get_content_area()
+        content_area.set_spacing(12)
+        content_area.set_margin_top(20)
+        content_area.set_margin_bottom(20)
+        content_area.set_margin_start(20)
+        content_area.set_margin_end(20)
+        
         dialog.run()
         dialog.destroy()
         self.load_installed_apps()  # Refrescar la lista
@@ -393,135 +601,237 @@ class InstalledAppsWindow(Gtk.Window):
 class PackageInstaller(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="Swift Install")
-        self.set_default_size(600, 400)
+        self.set_default_size(600, 500)
+        self.get_style_context().add_class("main-window")
         
-        # Estilo Gnome: Usar HeaderBar en lugar de menú tradicional
-        headerbar = Gtk.HeaderBar()
-        headerbar.set_show_close_button(True)
-        headerbar.set_title("Swift Install")
-        headerbar.set_subtitle(f"Versión {CURRENT_VERSION}")
-        self.set_titlebar(headerbar)
+        # Header bar al estilo GNOME
+        header_bar = Gtk.HeaderBar()
+        header_bar.set_show_close_button(True)
+        header_bar.set_title("Swift Install")
+        header_bar.set_subtitle(f"Versión {CURRENT_VERSION}")
+        header_bar.get_style_context().add_class("header-bar")
         
-        # Botón de aplicaciones instaladas en la HeaderBar
-        apps_button = Gtk.Button()
-        apps_icon = Gio.ThemedIcon(name="user-trash-symbolic")
-        apps_image = Gtk.Image.new_from_gicon(apps_icon, Gtk.IconSize.BUTTON)
-        apps_button.add(apps_image)
-        apps_button.set_tooltip_text("Desinstalar aplicaciones")
-        apps_button.connect("clicked", self.on_apps_clicked)
-        headerbar.pack_start(apps_button)
+        # Botón de menú en la header bar
+        menu_button = Gtk.MenuButton()
+        menu_button.set_tooltip_text("Menú")
+        icon = Gtk.Image.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.BUTTON)
+        menu_button.add(icon)
         
-        # Botones de menú directamente en la HeaderBar en lugar de un menú desplegable
-        about_button = Gtk.Button()
-        about_icon = Gio.ThemedIcon(name="help-about-symbolic")
-        about_image = Gtk.Image.new_from_gicon(about_icon, Gtk.IconSize.BUTTON)
-        about_button.add(about_image)
-        about_button.set_tooltip_text("Acerca de Inled Group")
-        about_button.connect("clicked", self.open_inled_es)
-        headerbar.pack_end(about_button)
+        # Crear el menú
+        popover = Gtk.Popover()
+        popover_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        popover_box.set_margin_top(10)
+        popover_box.set_margin_bottom(10)
+        popover_box.set_margin_start(10)
+        popover_box.set_margin_end(10)
         
-        report_button = Gtk.Button()
-        report_icon = Gio.ThemedIcon(name="dialog-warning-symbolic")
-        report_image = Gtk.Image.new_from_gicon(report_icon, Gtk.IconSize.BUTTON)
-        report_button.add(report_image)
-        report_button.set_tooltip_text("Reportar un error")
+        # Elementos del menú
+        about_button = Gtk.ModelButton(label="Acerca de Swift Install")
+        about_button.connect("clicked", self.on_about_clicked)
+        popover_box.add(about_button)
+        
+        report_button = Gtk.ModelButton(label="Reportar un error")
         report_button.connect("clicked", self.on_report_issue)
-        headerbar.pack_end(report_button)
+        popover_box.add(report_button)
         
-        update_button = Gtk.Button()
-        update_icon = Gio.ThemedIcon(name="software-update-available-symbolic")
-        update_image = Gtk.Image.new_from_gicon(update_icon, Gtk.IconSize.BUTTON)
-        update_button.add(update_image)
-        update_button.set_tooltip_text("Buscar actualizaciones")
+        update_button = Gtk.ModelButton(label="Buscar actualizaciones")
         update_button.connect("clicked", self.on_check_updates_clicked)
-        headerbar.pack_end(update_button)
+        popover_box.add(update_button)
         
-        # Contenedor principal
+        popover_box.show_all()
+        popover.add(popover_box)
+        menu_button.set_popover(popover)
+        
+        header_bar.pack_end(menu_button)
+        
+        self.set_titlebar(header_bar)
+
+        # Contenido principal
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
         main_box.set_margin_top(24)
         main_box.set_margin_bottom(24)
         main_box.set_margin_start(24)
         main_box.set_margin_end(24)
         self.add(main_box)
-        
+
         # Sección de selección de archivo
-        file_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        file_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        file_section.get_style_context().add_class("card")
         
-        file_header = Gtk.Label()
-        file_header.set_markup("<span font_weight='bold' font_size='large'>Instalar aplicaciones</span>")
-        file_header.set_halign(Gtk.Align.START)
+        # Título de la sección
+        title_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        icon = Gtk.Image.new_from_icon_name("package-x-generic-symbolic", Gtk.IconSize.LARGE_TOOLBAR)
+        title_box.pack_start(icon, False, False, 0)
         
-        file_description = Gtk.Label(label="Seleccione un archivo .deb, .rpm o .appimage para instalar")
-        file_description.set_halign(Gtk.Align.START)
-        file_description.get_style_context().add_class("dim-label")
+        title_label = Gtk.Label(label="Seleccionar paquete para instalar")
+        title_label.get_style_context().add_class("title-label")
+        title_box.pack_start(title_label, False, False, 0)
         
-        file_section.add(file_header)
-        file_section.add(file_description)
+        file_section.pack_start(title_box, False, False, 0)
         
-        # Selector de archivo con estilo Gnome
-        file_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        # Selector de archivo con estilo
+        file_chooser_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        file_chooser_box.get_style_context().add_class("file-chooser-button")
         
-        self.file_chooser = Gtk.FileChooserButton(title="Explorar archivos")
-        self.file_chooser.connect("file-set", self.on_file_selected)
+        file_icon = Gtk.Image.new_from_icon_name("document-open-symbolic", Gtk.IconSize.DIALOG)
+        file_chooser_box.pack_start(file_icon, True, True, 8)
         
-        self.install_button = Gtk.Button(label="Instalar")
-        self.install_button.get_style_context().add_class("suggested-action")
-        self.install_button.connect("clicked", self.on_install_clicked)
-        self.install_button.set_sensitive(False)
+        file_label = Gtk.Label(label="Haga clic para seleccionar un archivo")
+        file_label.get_style_context().add_class("subtitle-label")
+        file_chooser_box.pack_start(file_label, False, False, 8)
         
-        file_box.pack_start(self.file_chooser, True, True, 0)
-        file_box.pack_start(self.install_button, False, False, 0)
+        file_chooser_button = Gtk.Button()
+        file_chooser_button.add(file_chooser_box)
+        file_chooser_button.connect("clicked", self.on_file_chooser_clicked)
         
-        file_section.add(file_box)
+        file_section.pack_start(file_chooser_button, True, True, 0)
+        
+        # Etiqueta para mostrar el archivo seleccionado
+        self.selected_file_label = Gtk.Label(label="Ningún archivo seleccionado")
+        self.selected_file_label.get_style_context().add_class("subtitle-label")
+        file_section.pack_start(self.selected_file_label, False, False, 0)
+        
         main_box.pack_start(file_section, False, False, 0)
         
-        # Separador
-        separator = Gtk.Separator()
-        main_box.pack_start(separator, False, False, 0)
+        # Sección de acciones
+        actions_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        actions_section.get_style_context().add_class("card")
         
-        # Sección de herramientas
-        tools_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        # Título de la sección
+        actions_title_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        actions_icon = Gtk.Image.new_from_icon_name("preferences-other-symbolic", Gtk.IconSize.LARGE_TOOLBAR)
+        actions_title_box.pack_start(actions_icon, False, False, 0)
         
-        tools_header = Gtk.Label()
-        tools_header.set_markup("<span font_weight='bold' font_size='large'>Herramientas</span>")
-        tools_header.set_halign(Gtk.Align.START)
+        actions_title_label = Gtk.Label(label="Acciones")
+        actions_title_label.get_style_context().add_class("title-label")
+        actions_title_box.pack_start(actions_title_label, False, False, 0)
         
-        tools_section.add(tools_header)
+        actions_section.pack_start(actions_title_box, False, False, 0)
         
-        # Botones de herramientas con iconos
-        tools_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        # Botones de acción
+        buttons_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        buttons_box.set_homogeneous(True)
         
-        self.fix_deps_button = Gtk.Button(label="Corregir errores de instalación")
-        fix_icon = Gio.ThemedIcon(name="folder-download-symbolic")
-        fix_image = Gtk.Image.new_from_gicon(fix_icon, Gtk.IconSize.BUTTON)
-        self.fix_deps_button.set_image(fix_image)
-        self.fix_deps_button.set_always_show_image(True)
+        # Botón de instalar - CORREGIDO: sin label en el constructor
+        self.install_button = Gtk.Button()
+        self.install_button.get_style_context().add_class("action-button")
+        install_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        install_icon = Gtk.Image.new_from_icon_name("emblem-system-symbolic", Gtk.IconSize.BUTTON)
+        install_box.pack_start(install_icon, False, False, 0)
+        install_label = Gtk.Label(label="Instalar")
+        install_box.pack_start(install_label, False, False, 0)
+        self.install_button.add(install_box)
+        self.install_button.connect("clicked", self.on_install_clicked)
+        self.install_button.set_sensitive(False)
+        buttons_box.pack_start(self.install_button, True, True, 0)
+        
+        # Botón de corregir errores - CORREGIDO: sin label en el constructor
+        self.fix_deps_button = Gtk.Button()
+        self.fix_deps_button.get_style_context().add_class("secondary-button")
+        fix_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        fix_icon = Gtk.Image.new_from_icon_name("applications-utilities-symbolic", Gtk.IconSize.BUTTON)
+        fix_box.pack_start(fix_icon, False, False, 0)
+        fix_label = Gtk.Label(label="Corregir errores")
+        fix_box.pack_start(fix_label, False, False, 0)
+        self.fix_deps_button.add(fix_box)
         self.fix_deps_button.connect("clicked", self.on_fix_deps_clicked)
+        buttons_box.pack_start(self.fix_deps_button, True, True, 0)
         
-        tools_box.pack_start(self.fix_deps_button, True, True, 0)
-        tools_section.add(tools_box)
+        # Botón de eliminar aplicaciones - CORREGIDO: sin label en el constructor
+        self.apps_button = Gtk.Button()
+        self.apps_button.get_style_context().add_class("secondary-button")
+        apps_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        apps_icon = Gtk.Image.new_from_icon_name("user-trash-symbolic", Gtk.IconSize.BUTTON)
+        apps_box.pack_start(apps_icon, False, False, 0)
+        apps_label = Gtk.Label(label="Eliminar apps")
+        apps_box.pack_start(apps_label, False, False, 0)
+        self.apps_button.add(apps_box)
+        self.apps_button.connect("clicked", self.on_apps_clicked)
+        buttons_box.pack_start(self.apps_button, True, True, 0)
         
-        main_box.pack_start(tools_section, False, False, 0)
+        actions_section.pack_start(buttons_box, True, True, 0)
+        main_box.pack_start(actions_section, False, False, 0)
         
         # Sección de progreso
-        progress_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        progress_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        progress_section.get_style_context().add_class("card")
         
-        # Barra de progreso con estilo Gnome
+        # Título de la sección
+        progress_title_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        progress_icon = Gtk.Image.new_from_icon_name("emblem-synchronizing-symbolic", Gtk.IconSize.LARGE_TOOLBAR)
+        progress_title_box.pack_start(progress_icon, False, False, 0)
+        
+        progress_title_label = Gtk.Label(label="Progreso")
+        progress_title_label.get_style_context().add_class("title-label")
+        progress_title_box.pack_start(progress_title_label, False, False, 0)
+        
+        progress_section.pack_start(progress_title_box, False, False, 0)
+        
+        # Barra de progreso
         self.progress_bar = Gtk.ProgressBar()
-        self.progress_bar.set_show_text(True)
-        progress_section.add(self.progress_bar)
+        self.progress_bar.get_style_context().add_class("progress-bar")
+        progress_section.pack_start(self.progress_bar, False, False, 0)
         
         # Etiqueta de estado
         self.status_label = Gtk.Label(label="Seleccione un paquete a instalar")
-        self.status_label.set_halign(Gtk.Align.START)
-        progress_section.add(self.status_label)
+        self.status_label.get_style_context().add_class("status-label")
+        progress_section.pack_start(self.status_label, False, False, 0)
         
         main_box.pack_start(progress_section, False, False, 0)
-        
+
         self.installed_package = None
+        self.file_path = None
         
         # Comprobar actualizaciones al iniciar la aplicación
         GLib.timeout_add(500, self.check_updates_on_startup)
+    
+    def on_file_chooser_clicked(self, button):
+        dialog = Gtk.FileChooserDialog(
+            title="Seleccionar paquete",
+            parent=self,
+            action=Gtk.FileChooserAction.OPEN
+        )
+        dialog.add_buttons(
+            "Cancelar", Gtk.ResponseType.CANCEL,
+            "Abrir", Gtk.ResponseType.OK
+        )
+        
+        # Filtros para tipos de archivo
+        filter_deb = Gtk.FileFilter()
+        filter_deb.set_name("Paquetes Debian (.deb)")
+        filter_deb.add_pattern("*.deb")
+        dialog.add_filter(filter_deb)
+        
+        filter_rpm = Gtk.FileFilter()
+        filter_rpm.set_name("Paquetes RPM (.rpm)")
+        filter_rpm.add_pattern("*.rpm")
+        dialog.add_filter(filter_rpm)
+        
+        filter_appimage = Gtk.FileFilter()
+        filter_appimage.set_name("AppImage (.AppImage)")
+        filter_appimage.add_pattern("*.AppImage")
+        dialog.add_filter(filter_appimage)
+        
+        filter_tar = Gtk.FileFilter()
+        filter_tar.set_name("Archivos comprimidos (.tar.gz, .tar.xz)")
+        filter_tar.add_pattern("*.tar.gz")
+        filter_tar.add_pattern("*.tar.xz")
+        filter_tar.add_pattern("*.tgz")
+        dialog.add_filter(filter_tar)
+        
+        filter_all = Gtk.FileFilter()
+        filter_all.set_name("Todos los archivos")
+        filter_all.add_pattern("*")
+        dialog.add_filter(filter_all)
+        
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            self.file_path = dialog.get_filename()
+            self.selected_file_label.set_text(f"Archivo seleccionado: {os.path.basename(self.file_path)}")
+            self.install_button.set_sensitive(True)
+            self.status_label.set_text(f"Listo para instalar: {os.path.basename(self.file_path)}")
+        
+        dialog.destroy()
 
     def create_desktop_file(self, app_name):
         # Obtener la ruta del icono
@@ -587,7 +897,6 @@ Categories=Utility;
             GLib.idle_add(self.show_update_check_error)
     
     def show_no_updates_message(self):
-        # Diálogo de información con estilo Gnome
         dialog = Gtk.MessageDialog(
             transient_for=self,
             flags=0,
@@ -615,18 +924,15 @@ Categories=Utility;
         self.status_label.set_text("Seleccione un paquete a instalar")
         return False
 
-    def on_file_selected(self, widget):
-        self.file_path = widget.get_filename()
-        self.install_button.set_sensitive(True)
-        self.status_label.set_text(f"Seleccionó: {os.path.basename(self.file_path)}")
-
     def on_install_clicked(self, widget):
+        if not self.file_path:
+            return
+            
         self.install_button.set_sensitive(False)
         self.fix_deps_button.set_sensitive(False)
-        self.file_chooser.set_sensitive(False)
+        self.apps_button.set_sensitive(False)
         self.status_label.set_text("Instalando...")
         self.progress_bar.set_fraction(0.0)
-        self.progress_bar.set_text("Preparando instalación...")
 
         file_extension = os.path.splitext(self.file_path)[1].lower()
 
@@ -652,22 +958,10 @@ Categories=Utility;
             extract_dir = os.path.expanduser('~/.local')
             cmd = ['tar', '-xvf', self.file_path, '-C', extract_dir]
         else:
-            # Mostrar error con estilo Gnome
-            dialog = Gtk.MessageDialog(
-                transient_for=self,
-                flags=0,
-                message_type=Gtk.MessageType.ERROR,
-                buttons=Gtk.ButtonsType.OK,
-                text="Formato no soportado",
-                secondary_text="Este formato de paquete no está soportado por Swift Install."
-            )
-            dialog.run()
-            dialog.destroy()
-            
-            self.status_label.set_text("Formato de paquete no soportado")
+            self.status_label.set_text("Formato de paquete no soportado por Swift Install")
             self.install_button.set_sensitive(True)
-            self.file_chooser.set_sensitive(True)
             self.fix_deps_button.set_sensitive(True)
+            self.apps_button.set_sensitive(True)
             return
 
         thread = threading.Thread(target=self.run_installation, args=(cmd,))
@@ -677,10 +971,9 @@ Categories=Utility;
     def on_fix_deps_clicked(self, widget):
         self.install_button.set_sensitive(False)
         self.fix_deps_button.set_sensitive(False)
-        self.file_chooser.set_sensitive(False)
+        self.apps_button.set_sensitive(False)
         self.status_label.set_text("Corrigiendo errores")
         self.progress_bar.set_fraction(0.0)
-        self.progress_bar.set_text("Reparando dependencias...")
 
         cmd = ['pkexec', 'apt-get', 'install', '-f', '-y']
         thread = threading.Thread(target=self.run_fix_deps, args=(cmd,))
@@ -700,7 +993,7 @@ Categories=Utility;
                 if output == '' and process.poll() is not None:
                     break
                 if output:
-                    GLib.idle_add(self.update_progress, "Instalando...")
+                    GLib.idle_add(self.update_progress)
 
             _, stderr = process.communicate()
             
@@ -712,11 +1005,11 @@ Categories=Utility;
                     app_name = os.path.basename(self.file_path).replace('.appimage', '')
                     GLib.idle_add(self.installation_complete, f"AppImage instalado como {app_name}. Se ha creado un acceso directo.")
                 else:
-                    GLib.idle_add(self.installation_complete, "Instalación completada correctamente")
+                    GLib.idle_add(self.installation_complete, "Instalación completada con éxito")
             else:
-                GLib.idle_add(self.installation_complete, f"Error en la instalación", stderr)
+                GLib.idle_add(self.installation_complete, f"Error al instalar: {stderr}", True)
         except Exception as e:
-            GLib.idle_add(self.installation_complete, f"Error en la instalación", str(e))
+            GLib.idle_add(self.installation_complete, f"Error en la instalación: {str(e)}", True)
 
     def run_fix_deps(self, cmd):
         try:
@@ -727,97 +1020,109 @@ Categories=Utility;
                 if output == '' and process.poll() is not None:
                     break
                 if output:
-                    GLib.idle_add(self.update_progress, "Reparando dependencias...")
+                    GLib.idle_add(self.update_progress)
 
             _, stderr = process.communicate()
             
             if process.returncode == 0:
                 GLib.idle_add(self.fix_deps_complete, "Dependencias corregidas correctamente")
             else:
-                GLib.idle_add(self.fix_deps_complete, "Error al corregir dependencias", stderr)
+                GLib.idle_add(self.fix_deps_complete, f"Error al corregir dependencias: {stderr}", True)
         except Exception as e:
-            GLib.idle_add(self.fix_deps_complete, "Error en la instalación de dependencias", str(e))
+            GLib.idle_add(self.fix_deps_complete, f"Error al corregir dependencias: {str(e)}", True)
 
-    def update_progress(self, message=None):
+    def update_progress(self):
         new_value = min(1.0, self.progress_bar.get_fraction() + 0.01)
         self.progress_bar.set_fraction(new_value)
-        if message:
-            self.progress_bar.set_text(message)
         return False
 
-    def installation_complete(self, message, error_details=None):
-        if error_details:
-            # Mostrar diálogo de error con detalles
+    def installation_complete(self, message, is_error=False):
+        self.progress_bar.set_fraction(1.0)
+        self.status_label.set_text(message)
+        
+        if is_error:
             dialog = Gtk.MessageDialog(
                 transient_for=self,
                 flags=0,
                 message_type=Gtk.MessageType.ERROR,
                 buttons=Gtk.ButtonsType.OK,
-                text=message
+                text="Error en la instalación",
+                secondary_text=message
             )
-            dialog.format_secondary_text(error_details)
-            dialog.run()
-            dialog.destroy()
-            self.progress_bar.set_text("Error en la instalación")
         else:
-            # Mostrar diálogo de éxito
             dialog = Gtk.MessageDialog(
                 transient_for=self,
                 flags=0,
                 message_type=Gtk.MessageType.INFO,
                 buttons=Gtk.ButtonsType.OK,
-                text=message
+                text="Instalación completada",
+                secondary_text=message
             )
-            dialog.run()
-            dialog.destroy()
-            self.progress_bar.set_text("Instalación completada")
-            
-        self.status_label.set_text(message)
-        self.progress_bar.set_fraction(1.0)
+        
+        dialog.run()
+        dialog.destroy()
+        
         self.install_button.set_sensitive(False)
         self.fix_deps_button.set_sensitive(True)
-        self.file_chooser.set_sensitive(True)
+        self.apps_button.set_sensitive(True)
 
-    def fix_deps_complete(self, message, error_details=None):
-        if error_details:
-            # Mostrar diálogo de error con detalles
+    def fix_deps_complete(self, message, is_error=False):
+        self.progress_bar.set_fraction(1.0)
+        self.status_label.set_text(message)
+        
+        if is_error:
             dialog = Gtk.MessageDialog(
                 transient_for=self,
                 flags=0,
                 message_type=Gtk.MessageType.ERROR,
                 buttons=Gtk.ButtonsType.OK,
-                text=message
+                text="Error al corregir dependencias",
+                secondary_text=message
             )
-            dialog.format_secondary_text(error_details)
-            dialog.run()
-            dialog.destroy()
-            self.progress_bar.set_text("Error al corregir dependencias")
         else:
-            # Mostrar diálogo de éxito
             dialog = Gtk.MessageDialog(
                 transient_for=self,
                 flags=0,
                 message_type=Gtk.MessageType.INFO,
                 buttons=Gtk.ButtonsType.OK,
-                text=message
+                text="Dependencias corregidas",
+                secondary_text=message
             )
-            dialog.run()
-            dialog.destroy()
-            self.progress_bar.set_text("Dependencias corregidas")
-            
-        self.status_label.set_text(message)
-        self.progress_bar.set_fraction(1.0)
+        
+        dialog.run()
+        dialog.destroy()
+        
         self.install_button.set_sensitive(True)
         self.fix_deps_button.set_sensitive(True)
-        self.file_chooser.set_sensitive(True)
+        self.apps_button.set_sensitive(True)
 
     def on_report_issue(self, widget):
         webbrowser.open("https://github.com/Inled-Group/swiftinstall/issues")
-        
+    
     def open_inled_es(self, widget):
         webbrowser.open("https://inled.es")
+    
+    def on_about_clicked(self, widget):
+        about_dialog = Gtk.AboutDialog()
+        about_dialog.set_transient_for(self)
+        about_dialog.set_modal(True)
+        
+        about_dialog.set_program_name("Swift Install")
+        about_dialog.set_version(CURRENT_VERSION)
+        about_dialog.set_comments("El instalador de paquetes gráfico de Linux")
+        about_dialog.set_license_type(Gtk.License.GPL_3_0)
+        about_dialog.set_website("https://inled.es")
+        about_dialog.set_website_label("inled.es")
+        about_dialog.set_authors(["Inled Group"])
+        about_dialog.set_logo_icon_name("package-x-generic-symbolic")
+        
+        about_dialog.run()
+        about_dialog.destroy()
 
 def Component():
+    # Cargar el CSS para el estilo GNOME moderno
+    load_css()
+    
     win = PackageInstaller()
     win.connect("destroy", Gtk.main_quit)
     win.show_all()
