@@ -1,2 +1,3 @@
 #!/bin/bash
-python3 /usr/share/swiftinstall/start.py
+python3 "/usr/share/swiftinstall/fix-dconf-permissions.py"
+

@@ -9,7 +9,7 @@ import requests
 from packaging import version
 
 # Versión actual de la aplicación
-CURRENT_VERSION = "3.0"  # Cambia esto a la versión actual de tu aplicación
+CURRENT_VERSION = "5.0"  # Cambia esto a la versión actual de tu aplicación
 GITHUB_REPO = "Inled-Group/swiftinstall"
 
 # Aplicar CSS para un estilo GNOME moderno
@@ -29,10 +29,32 @@ def load_css():
     except Exception as e:
         print(f"Error al cargar el CSS: {e}")
 
-def check_for_updates():
-   ### Comprueba las actualizaciones conectando con la API de GitHub.
+def safe_open_url(url):
+    """Opens a URL safely with better error handling."""
     try:
-        response = requests.get(f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest", timeout=5)
+        # Use subprocess instead of webbrowser for better control
+        if os.name == 'posix':  # Linux/Unix
+            subprocess.Popen(['xdg-open', url])
+        else:  # Fallback to webbrowser
+            webbrowser.open(url)
+        return True
+    except Exception as e:
+        print(f"Error opening URL: {str(e)}")
+        return False
+
+def check_for_updates():
+    """Comprueba las actualizaciones conectando con la API de GitHub con mejor manejo de errores."""
+    try:
+        # Add a user agent to avoid GitHub API rate limiting
+        headers = {'User-Agent': f'SwiftInstall/{CURRENT_VERSION}'}
+        
+        # Add timeout and better error handling
+        response = requests.get(
+            f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest", 
+            headers=headers,
+            timeout=10
+        )
+        
         if response.status_code == 200:
             release_data = response.json()
             latest_version = release_data['tag_name'].lstrip('v')
@@ -42,9 +64,21 @@ def check_for_updates():
             if version.parse(latest_version) > version.parse(CURRENT_VERSION):
                 return (True, latest_version, release_url)
             return (False, latest_version, release_url)
+        elif response.status_code == 403:
+            print("Rate limit exceeded or access forbidden. Check GitHub API usage.")
+            return None
+        else:
+            print(f"Error checking for updates: HTTP {response.status_code}")
+            return None
+    except requests.exceptions.Timeout:
+        print("Timeout while checking for updates")
+        return None
+    except requests.exceptions.ConnectionError:
+        print("Connection error while checking for updates")
+        return None
     except Exception as e:
-        print(f"Vaya, actualmente no puedo comprobar mis actualizaciones: {str(e)}")
-    return None
+        print(f"Unexpected error checking for updates: {str(e)}")
+        return None
 
 class UpdateDialog(Gtk.Dialog):
     def __init__(self, parent, latest_version, release_url):
@@ -767,8 +801,8 @@ Categories=Utility;
         response = dialog.run()
         
         if response == Gtk.ResponseType.YES:
-            # Abrir la página de la versión en el navegador
-            webbrowser.open(release_url)
+            # Usar el método seguro en lugar de webbrowser.open directamente
+            safe_open_url(release_url)
         elif response == Gtk.ResponseType.CANCEL:
             # El usuario eligió ignorar esta versión - se podría guardar esta preferencia
             pass
@@ -995,10 +1029,10 @@ Categories=Utility;
         self.apps_button.set_sensitive(True)
 
     def on_report_issue(self, widget):
-        webbrowser.open("https://github.com/Inled-Group/swiftinstall/issues")
+        safe_open_url("https://github.com/Inled-Group/swiftinstall/issues")
     
     def open_inled_es(self, widget):
-        webbrowser.open("https://inled.es")
+        safe_open_url("https://inled.es")
     
     def on_about_clicked(self, widget):
         about_dialog = Gtk.AboutDialog()
@@ -1026,4 +1060,4 @@ def Component():
     win.show_all()
     Gtk.main()
 
-Component()
+Component() 

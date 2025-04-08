@@ -1,0 +1,102 @@
+ .header-bar {
+        background-color: #ffffff;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    .main-window {
+        background-color: #f6f5f4;
+    }
+    
+    .action-button {
+        background-color: #ffffff;
+        color: #3584e4;
+        border-radius: 4px;
+        padding: 8px 16px;
+        border: 1px solid #3584e4;
+    }
+    
+    .action-button:hover {
+        background-color: #2a76d2;
+    }
+    
+    .secondary-button {
+        background-color: #ffffff;
+        color: #3584e4;
+        border-radius: 4px;
+        padding: 8px 16px;
+        border: 1px solid #3584e4;
+    }
+    
+    .secondary-button:hover {
+        background-color: #f0f0f0;
+    }
+    
+    .destructive-button {
+        background-color: white;
+        color: #e01b24;
+        border-radius: 4px;
+        padding: 8px 16px;
+        border: none;
+    }
+    
+    .destructive-button:hover {
+        background-color: #c01020;
+    }
+    
+    .card {
+        background-color: white;
+        border-radius: 8px;
+        padding: 16px;
+        margin: 8px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    .title-label {
+        font-weight: bold;
+        font-size: 16px;
+    }
+    
+    .subtitle-label {
+        color: #5e5c64;
+        font-size: 14px;
+    }
+    
+    .progress-bar trough {
+        background-color: #deddda;
+        border-radius: 4px;
+        min-height: 6px;
+    }
+    
+    .progress-bar progress {
+        background-color: #3584e4;
+        border-radius: 4px;
+        min-height: 6px;
+    }
+    
+    .file-chooser-button {
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px dashed #3584e4;
+        background-color: rgba(53, 132, 228, 0.1);
+    }
+    
+    .file-chooser-button:hover {
+        background-color: rgba(53, 132, 228, 0.2);
+    }
+    
+    .status-label {
+        margin-top: 8px;
+        margin-bottom: 8px;
+    }
+    
+    .list-row {
+        padding: 12px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .search-entry {
+        margin: 8px;
+        padding: 8px;
+        border-radius: 16px;
+    }
