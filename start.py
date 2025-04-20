@@ -9,7 +9,7 @@ import requests
 from packaging import version
 
 # Versión actual de la aplicación
-CURRENT_VERSION = "5.0"  # Cambia esto a la versión actual de tu aplicación
+CURRENT_VERSION = "5.0"  # Esto se cambia según haya una nueva release
 GITHUB_REPO = "Inled-Group/swiftinstall"
 
 # Aplicar CSS para un estilo GNOME moderno
@@ -17,6 +17,7 @@ def load_css():
     css_provider = Gtk.CssProvider()
     
     # Cargar el CSS desde un archivo externo
+    # TODO: Inyectar CSS en el propio fichero python ya que no funciona el css externo una vez se empaqueta.
     try:
         with open("styles.css", "rb") as css_file:
             css_provider.load_from_data(css_file.read())
@@ -338,6 +339,7 @@ class InstalledAppsWindow(Gtk.Window):
         self.listbox.add(row)
         row.show_all()
     
+    # Mensaje de que no hay aplicaciones instaladas en el sistema (clara prueba de que está habiendo un error)
     def show_no_apps_message(self):
         row = Gtk.ListBoxRow()
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
@@ -400,6 +402,7 @@ class InstalledAppsWindow(Gtk.Window):
                                 return True
         return False
     
+    # Aviso desinstaalción
     def on_uninstall_clicked(self, button, package_name, is_appimage=False):
         if is_appimage:
             message = f"¿Deseas desinstalar {package_name}?"
@@ -437,6 +440,7 @@ class InstalledAppsWindow(Gtk.Window):
         if response == Gtk.ResponseType.YES:
             self.uninstall_package(package_name, is_appimage)
     
+    # Desinstalar paquete
     def uninstall_package(self, package_name, is_appimage=False):
         self.progress_bar.set_fraction(0.0)
         self.progress_bar.show()
@@ -477,11 +481,13 @@ class InstalledAppsWindow(Gtk.Window):
         except subprocess.CalledProcessError as e:
             GLib.idle_add(self.uninstall_complete, package_name, False, is_appimage, str(e))
     
+    # Barra de progreso de la desinstalación
     def update_uninstall_progress(self):
         new_value = min(1.0, self.progress_bar.get_fraction() + 0.05)
         self.progress_bar.set_fraction(new_value)
         return False
 
+    # Mensaje después de ejecutar la desinstalación
     def uninstall_complete(self, package_name, success, is_appimage=False, error_message=None):
         self.progress_bar.hide()
         self.progress_bar.set_fraction(0.0)
