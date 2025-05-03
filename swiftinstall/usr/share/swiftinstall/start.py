@@ -9,7 +9,7 @@ import requests
 from packaging import version
 
 # Versión actual de la aplicación
-CURRENT_VERSION = "5.0"  # Cambia esto a la versión actual de tu aplicación
+CURRENT_VERSION = "5.0"  # Esto se cambia según haya una nueva release
 GITHUB_REPO = "Inled-Group/swiftinstall"
 
 # Aplicar CSS para un estilo GNOME moderno
@@ -17,6 +17,7 @@ def load_css():
     css_provider = Gtk.CssProvider()
     
     # Cargar el CSS desde un archivo externo
+    # TODO: Inyectar CSS en el propio fichero python ya que no funciona el css externo una vez se empaqueta.
     try:
         with open("styles.css", "rb") as css_file:
             css_provider.load_from_data(css_file.read())
@@ -338,6 +339,7 @@ class InstalledAppsWindow(Gtk.Window):
         self.listbox.add(row)
         row.show_all()
     
+    # Mensaje de que no hay aplicaciones instaladas en el sistema (clara prueba de que está habiendo un error)
     def show_no_apps_message(self):
         row = Gtk.ListBoxRow()
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
@@ -400,6 +402,7 @@ class InstalledAppsWindow(Gtk.Window):
                                 return True
         return False
     
+    # Aviso desinstaalción
     def on_uninstall_clicked(self, button, package_name, is_appimage=False):
         if is_appimage:
             message = f"¿Deseas desinstalar {package_name}?"
@@ -437,6 +440,7 @@ class InstalledAppsWindow(Gtk.Window):
         if response == Gtk.ResponseType.YES:
             self.uninstall_package(package_name, is_appimage)
     
+    # Desinstalar paquete
     def uninstall_package(self, package_name, is_appimage=False):
         self.progress_bar.set_fraction(0.0)
         self.progress_bar.show()
@@ -477,11 +481,13 @@ class InstalledAppsWindow(Gtk.Window):
         except subprocess.CalledProcessError as e:
             GLib.idle_add(self.uninstall_complete, package_name, False, is_appimage, str(e))
     
+    # Barra de progreso de la desinstalación
     def update_uninstall_progress(self):
         new_value = min(1.0, self.progress_bar.get_fraction() + 0.05)
         self.progress_bar.set_fraction(new_value)
         return False
 
+    # Mensaje después de ejecutar la desinstalación
     def uninstall_complete(self, package_name, success, is_appimage=False, error_message=None):
         self.progress_bar.hide()
         self.progress_bar.set_fraction(0.0)
@@ -1050,8 +1056,87 @@ Categories=Utility;
         
         about_dialog.run()
         about_dialog.destroy()
+def check_dependencies():
+    """Verifica que todas las dependencias necesarias estén instaladas."""
+    missing_deps = []
+    
+    # Verificar Python
+    try:
+        import sys
+        python_version = sys.version_info
+        if python_version.major < 3 or (python_version.major == 3 and python_version.minor < 6):
+            missing_deps.append(f"Python 3.6+ (versión actual: {python_version.major}.{python_version.minor})")
+    except:
+        missing_deps.append("Python 3.6+")
+    
+    # Verificar dependencias de GTK
+    try:
+        import gi
+        gi.require_version('Gtk', '3.0')
+        from gi.repository import Gtk
+    except ImportError:
+        missing_deps.append("PyGObject (python3-gi)")
+    except ValueError:
+        missing_deps.append("GTK 3.0 (libgtk-3-0)")
+    
+    # Verificar otras dependencias de Python
+    dependencies = [
+        ('requests', 'requests'),
+        ('packaging', 'packaging'),
+    ]
+    
+    for module_name, package_name in dependencies:
+        try:
+            __import__(module_name)
+        except ImportError:
+            missing_deps.append(f"{package_name}")
+    
+    return missing_deps
+
+def show_dependencies_dialog(parent_window, missing_deps):
+    """Muestra un diálogo con las dependencias faltantes."""
+    if not missing_deps:
+        return True
+    
+    from gi.repository import Gtk
+    
+    deps_text = "\n".join([f"• {dep}" for dep in missing_deps])
+    install_cmd = "sudo apt install python3 python3-gi python3-requests python3-packaging libgtk-3-0"
+    
+    dialog = Gtk.MessageDialog(
+        transient_for=parent_window,
+        flags=0,
+        message_type=Gtk.MessageType.ERROR,
+        buttons=Gtk.ButtonsType.OK,
+        text="Faltan dependencias requeridas"
+    )
+    
+    dialog.format_secondary_markup(
+        f"Las siguientes dependencias son necesarias para ejecutar Swift Install:\n\n"
+        f"{deps_text}\n\n"
+        f"<b>Comando recomendado para instalar:</b>\n"
+        f"<tt>{install_cmd}</tt>"
+    )
+    
+    # Hacer el diálogo más grande para mostrar todo el contenido
+    dialog.set_default_size(450, 300)
+    
+    # Estilizar el diálogo
+    content_area = dialog.get_content_area()
+    content_area.set_spacing(12)
+    content_area.set_margin_top(20)
+    content_area.set_margin_bottom(20)
+    content_area.set_margin_start(20)
+    content_area.set_margin_end(20)
+    
+    response = dialog.run()
+    dialog.destroy()
+    
+    return False  # Indicar que faltan dependencias
 
 def Component():
+
+    missing_deps = check_dependencies()
     # Cargar el CSS para el estilo GNOME moderno
     load_css()
     
