@@ -9,7 +9,7 @@ import requests
 from packaging import version
 
 # Versión actual de la aplicación
-CURRENT_VERSION = "5.0"  # Esto se cambia según haya una nueva release
+CURRENT_VERSION = "7.0"  # Esto se cambia según haya una nueva release
 GITHUB_REPO = "Inled-Group/swiftinstall"
 
 # Aplicar CSS para un estilo GNOME moderno
