@@ -1,0 +1,118 @@
+app-id: es.inled.SwiftInstall
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+command: swiftinstall
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --socket=system-bus
+  - --socket=session-bus
+  - --device=dri
+  - --filesystem=host
+  - --filesystem=host-etc
+  - --filesystem=host-os
+  - --filesystem=/tmp
+  - --filesystem=/var/tmp
+  - --filesystem=/opt
+  - --filesystem=/var/lib
+  - --filesystem=/var/cache
+  - --filesystem=/var/log
+  - --filesystem=xdg-cache
+  - --filesystem=xdg-data
+  - --filesystem=xdg-config
+  - --filesystem=xdg-run/gvfsd
+  - --filesystem=/run/user
+  - --filesystem=/media
+  - --filesystem=/mnt
+  - --filesystem=/proc
+  - --filesystem=/sys
+  - --talk-name=org.freedesktop.FileManager1
+  - --talk-name=org.freedesktop.DBus
+  - --talk-name=org.freedesktop.PackageKit
+  - --talk-name=org.freedesktop.Flatpak
+  - --talk-name=org.freedesktop.PolicyKit1
+  - --talk-name=org.freedesktop.systemd1
+  - --talk-name=org.gtk.vfs.*
+  - --talk-name=com.ubuntu.SoftwareProperties
+  - --talk-name=org.debian.apt
+  - --system-talk-name=org.freedesktop.PackageKit
+  - --system-talk-name=org.freedesktop.PolicyKit1
+  - --system-talk-name=org.freedesktop.systemd1
+  - --system-talk-name=org.freedesktop.UDisks2
+  - --system-talk-name=org.debian.apt
+  - --env=PATH=/app/bin:/usr/bin:/bin:/sbin:/usr/sbin:/usr/local/bin
+  - --env=PYTHONPATH=/app/lib/python3.11/site-packages
+  - --env=SUDO_ASKPASS=/app/bin/pkexec
+  - --allow=devel
+  - --allow=multiarch
+  - --unset-env=LD_PRELOAD
+
+modules:
+  - name: system-tools
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/bin
+      - |
+        cat > /app/bin/pkexec << 'EOF'
+        #!/bin/bash
+        exec flatpak-spawn --host pkexec "$@"
+        EOF
+      - chmod +x /app/bin/pkexec
+      - |
+        cat > /app/bin/apt << 'EOF'
+        #!/bin/bash
+        exec flatpak-spawn --host apt "$@"
+        EOF
+      - chmod +x /app/bin/apt
+      - |
+        cat > /app/bin/dpkg << 'EOF'
+        #!/bin/bash
+        exec flatpak-spawn --host dpkg "$@"
+        EOF
+      - chmod +x /app/bin/dpkg
+      - |
+        cat > /app/bin/rpm << 'EOF'
+        #!/bin/bash
+        exec flatpak-spawn --host rpm "$@"
+        EOF
+      - chmod +x /app/bin/rpm
+      - |
+        cat > /app/bin/systemctl << 'EOF'
+        #!/bin/bash
+        exec flatpak-spawn --host systemctl "$@"
+        EOF
+      - chmod +x /app/bin/systemctl
+    sources: []
+
+  - name: python3-dependencies
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=${FLATPAK_DEST} requests packaging
+    build-options:
+      build-args:
+        - --share=network
+    sources: []
+
+  - name: swiftinstall
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 start.py /app/share/swiftinstall/start.py
+      - install -Dm644 styles.css /app/share/swiftinstall/styles.css
+      - install -Dm644 appimage.png /app/share/swiftinstall/appimage.png
+      - install -Dm644 es.inled.SwiftInstall.metainfo.xml /app/share/metainfo/es.inled.SwiftInstall.metainfo.xml
+      - install -Dm644 swiftinstall/usr/share/applications/es.inled.SwiftInstall.desktop /app/share/applications/es.inled.SwiftInstall.desktop
+      - install -Dm644 swiftinstall/usr/share/pixmaps/es.inled.SwiftInstall.png /app/share/icons/hicolor/256x256/apps/es.inled.SwiftInstall.png
+      - mkdir -p /app/bin
+      - |
+        cat > /app/bin/swiftinstall << 'EOF'
+        #!/bin/bash
+        exec python3 /app/share/swiftinstall/start.py "$@"
+        EOF
+      - chmod +x /app/bin/swiftinstall
+    sources:
+      - type: dir
+        path: .
+

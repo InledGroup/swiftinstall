@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>es.inled.SwiftInstall</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Swift Install</name>
+  <summary>Un gestor de paquetes visual con utilidades de limpieza y análisis antivirus</summary>
+  <description>
+    <p>
+      Con Swiftinstall no tendrás que volver a usar la terminal para gestionar aplicaciones. Instala ficheros .deb, .rpm y .appimage de forma 100% visual. Desinstala aplicaciones de forma visual, hayan sido instaladas por la store o manualmente. Limpia el ordenador de archivos basura y realiza un análisis antivirus
+    </p>
+    <p>
+     Swiftinstall está diseñado para tí:
+    </p>
+    <ul>
+      <li>📦 Soporte de paquetes .deb, .rpm y .appimage</li>
+      <li>🖥️ Interfaz intuitiva, no requiere conocimientos</li>
+      <li>🔧 Mantenimiento sencillo del sistema</li>
+      <li>😀La aplicación se comporta como un amigo, un asistente personal alegre</li>
+    </ul>
+    <p>
+      Swiftinstall ofrece más funciones que Gdebi al permitir, por ejemplo, el análisis antivirus y la limpieza de ficheros basura así como la desisntalación de cualquier paquete instalado en el sistema.
+    </p>
+
+    
+  </description>
+  <url type="homepage">https://github.com/inled-group/swiftinstall</url>
+  <url type="bugtracker">https://github.com/inled-group/swiftinstall/issues</url>
+  <developer_name>Inled Group</developer_name>
+  <launchable type="desktop-id">es.inled.SwiftInstall.desktop</launchable>
+  <provides>
+    <binary>swiftinstall</binary>
+  </provides>
+  <releases>
+    <release version="8.0" date="2025-08-17">
+      <description>
+        <p>Muchas funciones nuevas:</p>
+        <ul>
+          <li>Interfaz rediseñada con GTK4</li>
+          <li>Soporte modo claro y oscuro</li>
+          <li>Funciones de análisis antivirus</li>
+          <li>Funciones de limpieza de archivos basura</li>
+          <li>Autoinstalación de dependencias faltantes en una instalación fallida</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1" />
+  <categories>
+    <category>Utility</category>
+    <category>System</category>
+  </categories>
+</component>
