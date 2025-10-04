@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Swift Install
 Comment=Simple package installer for Linux
-Exec=flatpak run es.inled.SwiftInstall
+Exec=/usr/bin/swiftinstall
 Icon=es.inled.SwiftInstall
 Terminal=false
 Type=Application

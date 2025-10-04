@@ -1,9 +1,9 @@
-Package: Swiftinstall
-Version: 8.0
+Package: swiftinstall
+Version: 8.1
 Section: utils
 Priority: optional
 Architecture: all
-Depends: python3 (>= 3.6), python3-gi (>= 3.30), gir1.2-gtk-3.0 (>= 3.20), gir1.2-adwaita-1 (>= 1.0), python3-requests (>= 2.20), python3-packaging (>= 20.0), gir1.2-glib-2.0, gir1.2-gio-2.0, gir1.2-gdk-3.0
+Depends: python3 (>= 3.6), python3-gi (>= 3.30), gir1.2-gtk-4.0 (>= 4.0), gir1.2-adw-1 (>= 1.0), python3-requests (>= 2.20), python3-packaging (>= 20.0), gir1.2-glib-2.0, gir1.2-gio-2.0
 Maintainer: Inled Group <contacto@inled.es>
 Description: Swift Install Package Manager
  A simple GTK application for installing and managing

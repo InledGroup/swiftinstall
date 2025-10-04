@@ -220,12 +220,26 @@ class SystemCleanupWindow(Adw.Window):
         toolbar_view.add_top_bar(header_bar)
         self.set_content(toolbar_view)
 
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
-        main_box.set_margin_top(16)
-        main_box.set_margin_bottom(16)
-        main_box.set_margin_start(16)
-        main_box.set_margin_end(16)
-        toolbar_view.set_content(main_box)
+        # Contenido desplazable para que no se salga de la pantalla
+        if height > 450:
+            scrolled_main = Gtk.ScrolledWindow()
+            scrolled_main.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+            scrolled_main.set_propagate_natural_height(True)
+            toolbar_view.set_content(scrolled_main)
+
+            main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+            main_box.set_margin_top(16)
+            main_box.set_margin_bottom(16)
+            main_box.set_margin_start(16)
+            main_box.set_margin_end(16)
+            scrolled_main.set_child(main_box)
+        else:
+            main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+            main_box.set_margin_top(16)
+            main_box.set_margin_bottom(16)
+            main_box.set_margin_start(16)
+            main_box.set_margin_end(16)
+            toolbar_view.set_content(main_box)
 
         # Título y descripción
         title_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -1034,11 +1048,9 @@ class AntivirusWindow(Adw.Window):
     def _on_folder_dialog_response(self, dialog, response):
         """Maneja la respuesta del diálogo de selección de carpeta."""
         if response == Gtk.ResponseType.ACCEPT:
-            files = dialog.get_files()
-            if files:
-                file = files.get_item(0)
-                if file:
-                    self.custom_dir_entry.set_text(file.get_path())
+            file = dialog.get_file()
+            if file:
+                self.custom_dir_entry.set_text(file.get_path())
         dialog.destroy()
 
     def on_install_clam_clicked(self, button):
@@ -1418,12 +1430,26 @@ class InstalledAppsWindow(Adw.Window):
         toolbar_view.add_top_bar(header_bar)
         self.set_content(toolbar_view)
 
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        main_box.set_margin_top(16)
-        main_box.set_margin_bottom(16)
-        main_box.set_margin_start(16)
-        main_box.set_margin_end(16)
-        toolbar_view.set_content(main_box)
+        # Contenido desplazable para pantallas pequeñas
+        if height > 380:
+            scrolled_main = Gtk.ScrolledWindow()
+            scrolled_main.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+            scrolled_main.set_propagate_natural_height(True)
+            toolbar_view.set_content(scrolled_main)
+
+            main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+            main_box.set_margin_top(16)
+            main_box.set_margin_bottom(16)
+            main_box.set_margin_start(16)
+            main_box.set_margin_end(16)
+            scrolled_main.set_child(main_box)
+        else:
+            main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+            main_box.set_margin_top(16)
+            main_box.set_margin_bottom(16)
+            main_box.set_margin_start(16)
+            main_box.set_margin_end(16)
+            toolbar_view.set_content(main_box)
 
         # Barra de búsqueda con icono
         search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -1802,7 +1828,9 @@ class PackageInstaller(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app)
         self.set_title("Swift Install")
-        self.set_default_size(600, 500)
+        # Ajustar tamaño de ventana principal a la pantalla
+        width, height = get_safe_window_size(600, 500, 0.9)
+        self.set_default_size(width, height)
         self.add_css_class("main-window")
         
         # Header bar al estilo GNOME
@@ -1848,13 +1876,26 @@ class PackageInstaller(Adw.ApplicationWindow):
         toolbar_view.add_top_bar(header_bar)
         self.set_content(toolbar_view)
 
-        # Contenido principal
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
-        main_box.set_margin_top(24)
-        main_box.set_margin_bottom(24)
-        main_box.set_margin_start(24)
-        main_box.set_margin_end(24)
-        toolbar_view.set_content(main_box)
+        # Contenido principal con scroll si es necesario
+        if height > 500:
+            scrolled_main = Gtk.ScrolledWindow()
+            scrolled_main.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+            scrolled_main.set_propagate_natural_height(True)
+            toolbar_view.set_content(scrolled_main)
+
+            main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
+            main_box.set_margin_top(24)
+            main_box.set_margin_bottom(24)
+            main_box.set_margin_start(24)
+            main_box.set_margin_end(24)
+            scrolled_main.set_child(main_box)
+        else:
+            main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
+            main_box.set_margin_top(24)
+            main_box.set_margin_bottom(24)
+            main_box.set_margin_start(24)
+            main_box.set_margin_end(24)
+            toolbar_view.set_content(main_box)
 
         # Sección de selección de archivo
         file_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
@@ -2045,12 +2086,10 @@ class PackageInstaller(Adw.ApplicationWindow):
     
     def _on_file_dialog_response(self, dialog, response):
         if response == Gtk.ResponseType.ACCEPT:
-            files = dialog.get_files()
-            if files:
-                file = files.get_item(0)
-                if file:
-                    self.file_path = file.get_path()
-                    self.selected_file_label.set_text(f"Archivo seleccionado: {os.path.basename(self.file_path)}")
+            file = dialog.get_file()
+            if file:
+                self.file_path = file.get_path()
+                self.selected_file_label.set_text(f"Archivo seleccionado: {os.path.basename(self.file_path)}")
                 self.install_button.set_sensitive(True)
                 self.status_label.set_text(f"Estoy listo para instalar: {os.path.basename(self.file_path)}")
         dialog.destroy()
@@ -2695,7 +2734,7 @@ def show_dependencies_dialog(parent_window, missing_deps):
 
 class SwiftInstallApp(Adw.Application):
     def __init__(self):
-        super().__init__(application_id="es.inled.SwiftInstall")
+        super().__init__(application_id="com.inled.swiftinstall")
         self.connect("activate", self.on_activate)
     
     def on_activate(self, app):

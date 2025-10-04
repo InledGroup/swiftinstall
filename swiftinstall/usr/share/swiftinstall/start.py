@@ -220,12 +220,26 @@ class SystemCleanupWindow(Adw.Window):
         toolbar_view.add_top_bar(header_bar)
         self.set_content(toolbar_view)
 
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
-        main_box.set_margin_top(16)
-        main_box.set_margin_bottom(16)
-        main_box.set_margin_start(16)
-        main_box.set_margin_end(16)
-        toolbar_view.set_content(main_box)
+        # Contenido desplazable para que no se salga de la pantalla
+        if height > 450:
+            scrolled_main = Gtk.ScrolledWindow()
+            scrolled_main.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+            scrolled_main.set_propagate_natural_height(True)
+            toolbar_view.set_content(scrolled_main)
+
+            main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+            main_box.set_margin_top(16)
+            main_box.set_margin_bottom(16)
+            main_box.set_margin_start(16)
+            main_box.set_margin_end(16)
+            scrolled_main.set_child(main_box)
+        else:
+            main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+            main_box.set_margin_top(16)
+            main_box.set_margin_bottom(16)
+            main_box.set_margin_start(16)
+            main_box.set_margin_end(16)
+            toolbar_view.set_content(main_box)
 
         # Título y descripción
         title_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -1416,12 +1430,26 @@ class InstalledAppsWindow(Adw.Window):
         toolbar_view.add_top_bar(header_bar)
         self.set_content(toolbar_view)
 
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        main_box.set_margin_top(16)
-        main_box.set_margin_bottom(16)
-        main_box.set_margin_start(16)
-        main_box.set_margin_end(16)
-        toolbar_view.set_content(main_box)
+        # Contenido desplazable para pantallas pequeñas
+        if height > 380:
+            scrolled_main = Gtk.ScrolledWindow()
+            scrolled_main.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+            scrolled_main.set_propagate_natural_height(True)
+            toolbar_view.set_content(scrolled_main)
+
+            main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+            main_box.set_margin_top(16)
+            main_box.set_margin_bottom(16)
+            main_box.set_margin_start(16)
+            main_box.set_margin_end(16)
+            scrolled_main.set_child(main_box)
+        else:
+            main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+            main_box.set_margin_top(16)
+            main_box.set_margin_bottom(16)
+            main_box.set_margin_start(16)
+            main_box.set_margin_end(16)
+            toolbar_view.set_content(main_box)
 
         # Barra de búsqueda con icono
         search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -1800,7 +1828,9 @@ class PackageInstaller(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app)
         self.set_title("Swift Install")
-        self.set_default_size(600, 500)
+        # Ajustar tamaño de ventana principal a la pantalla
+        width, height = get_safe_window_size(600, 500, 0.9)
+        self.set_default_size(width, height)
         self.add_css_class("main-window")
         
         # Header bar al estilo GNOME
@@ -1846,13 +1876,26 @@ class PackageInstaller(Adw.ApplicationWindow):
         toolbar_view.add_top_bar(header_bar)
         self.set_content(toolbar_view)
 
-        # Contenido principal
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
-        main_box.set_margin_top(24)
-        main_box.set_margin_bottom(24)
-        main_box.set_margin_start(24)
-        main_box.set_margin_end(24)
-        toolbar_view.set_content(main_box)
+        # Contenido principal con scroll si es necesario
+        if height > 500:
+            scrolled_main = Gtk.ScrolledWindow()
+            scrolled_main.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+            scrolled_main.set_propagate_natural_height(True)
+            toolbar_view.set_content(scrolled_main)
+
+            main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
+            main_box.set_margin_top(24)
+            main_box.set_margin_bottom(24)
+            main_box.set_margin_start(24)
+            main_box.set_margin_end(24)
+            scrolled_main.set_child(main_box)
+        else:
+            main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
+            main_box.set_margin_top(24)
+            main_box.set_margin_bottom(24)
+            main_box.set_margin_start(24)
+            main_box.set_margin_end(24)
+            toolbar_view.set_content(main_box)
 
         # Sección de selección de archivo
         file_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
