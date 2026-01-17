@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+# Update desktop database
+if command -v update-desktop-database >/dev/null; then
+    update-desktop-database /usr/share/applications || true
+fi
+
+# Update icon cache
+if command -v gtk-update-icon-cache >/dev/null; then
+    gtk-update-icon-cache /usr/share/icons/hicolor || true
+fi
+
+# Update mime database just in case
+if command -v update-mime-database >/dev/null; then
+    update-mime-database /usr/share/mime || true
+fi

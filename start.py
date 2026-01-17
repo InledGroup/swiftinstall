@@ -8,6 +8,7 @@ import threading
 import webbrowser
 import requests
 import time
+import sys
 from packaging import version
 
 # Versión actual de la aplicación
@@ -208,7 +209,7 @@ class UpdateDialog(Adw.AlertDialog):
     def __init__(self, parent, latest_version, release_url):
         super().__init__()
         self.set_heading(_("Actualización disponible"))
-        self.set_body(_(f"Versión actual: {CURRENT_VERSION}\nNueva versión: {latest_version}"))
+        self.set_body(_("Versión actual: {}\nNueva versión: {}").format(CURRENT_VERSION, latest_version))
         self.add_response("cancel", _("Recordar más tarde"))
         self.add_response("update", _("Actualizar ahora"))
         self.set_response_appearance("update", Adw.ResponseAppearance.SUGGESTED)
@@ -529,7 +530,7 @@ class SystemCleanupWindow(Adw.Window):
         
         # Formatear el tamaño total
         size_str = self.format_size(self.total_size)
-        self.status_label.set_text(_(f"Análisis completo. Se pueden liberar: {size_str}"))
+        self.status_label.set_text(_("Análisis completo. Se pueden liberar: {}").format(size_str))
         
         return False
 
@@ -553,7 +554,7 @@ class SystemCleanupWindow(Adw.Window):
         # Confirmar la limpieza
         dialog = Adw.AlertDialog(
             heading=_("Autorízame y yo limpio el sistema"),
-            body=_(f"Voy a limpiar el sistema.\n\nLiberaré aproximadamente: {self.format_size(self.total_size)}\n\nTen en cuenta que esta acción no se puede revertir.")
+            body=_("Voy a limpiar el sistema.\n\nLiberaré aproximadamente: {}\n\nTen en cuenta que esta acción no se puede revertir.").format(self.format_size(self.total_size))
         )
         dialog.add_response("cancel", _("Cancelar"))
         dialog.add_response("clean", _("Limpiar"))
@@ -692,14 +693,14 @@ class SystemCleanupWindow(Adw.Window):
         self.clean_button.set_sensitive(False)
         
         size_str = self.format_size(cleaned_size)
-        self.status_label.set_text(_(f"Limpieza completada. Espacio liberado: {size_str}"))
+        self.status_label.set_text(_("Limpieza completada. Espacio liberado: {}").format(size_str))
         
         # Mostrar diálogo de completado
         dialog = Adw.AlertDialog(
             heading=_("¡Ya he terminado!"),
-            body=_(f"He dejado impoluto tu Linux.\n\nHe liberado {size_str} que estaban ocupando espacio sin necesidad.")
+            body=_("He dejado impoluto tu Linux.\n\nHe liberado {} que estaban ocupando espacio sin necesidad.").format(size_str)
         )
-        dialog.add_response("ok", "OK")
+        dialog.add_response("ok", _("OK"))
         dialog.set_default_response("ok")
         dialog.present(self)
         
@@ -710,13 +711,13 @@ class SystemCleanupWindow(Adw.Window):
         self.progress_bar.set_visible(False)
         self.analyze_button.set_sensitive(True)
         self.clean_button.set_sensitive(True)
-        self.status_label.set_text(_(f"Error en la limpieza: {error_msg}"))
+        self.status_label.set_text(_("Error en la limpieza: {}").format(error_msg))
         
         dialog = Adw.AlertDialog(
             heading=_("Error en la limpieza"),
-            body=_(f"Ocurrió un error durante la limpieza:\n\n{error_msg}")
+            body=_("Ocurrió un error durante la limpieza:\n\n{}").format(error_msg)
         )
-        dialog.add_response("ok", "OK")
+        dialog.add_response("ok", _("OK"))
         dialog.set_default_response("ok")
         dialog.present(self)
         
@@ -1732,9 +1733,9 @@ class InstalledAppsWindow(Adw.Window):
     # Aviso desinstalación
     def on_uninstall_clicked(self, button, package_name, is_appimage=False):
         if is_appimage:
-            message = _(f"¿Deseas desinstalar {package_name}?")
+            message = _("¿Deseas desinstalar {}?").format(package_name)
         else:
-            message = _(f"¿Deseas desinstalar {package_name}?")
+            message = _("¿Deseas desinstalar {}?").format(package_name)
             
         dialog = Adw.AlertDialog(
             heading=_("Confirmación"),
@@ -1764,7 +1765,7 @@ class InstalledAppsWindow(Adw.Window):
     def uninstall_package(self, package_name, is_appimage=False):
         self.progress_bar.set_fraction(0.0)
         self.progress_bar.set_visible(True)
-        self.status_label.set_text(_(f"Desinstalando {package_name}..."))
+        self.status_label.set_text(_("Desinstalando {}...").format(package_name))
         
         if is_appimage:
             # Eliminar el AppImage y su archivo .desktop
@@ -1814,28 +1815,28 @@ class InstalledAppsWindow(Adw.Window):
         
         if success:
             if is_appimage:
-                message = _(f"{package_name} ha sido desinstalado correctamente. Recuerda borrar los archivos que haya creado la aplicación.")
+                message = _("{} ha sido desinstalado correctamente. Recuerda borrar los archivos que haya creado la aplicación.").format(package_name)
             else:
-                message = _(f"{package_name} ha sido desinstalado correctamente.")
+                message = _("{} ha sido desinstalado correctamente.").format(package_name)
                 
             dialog = Adw.AlertDialog(
                 heading=_("Desinstalación completada"),
                 body=message
             )
-            dialog.add_response("ok", "OK")
+            dialog.add_response("ok", _("OK"))
             dialog.set_default_response("ok")
             self.status_label.set_text(_("Desinstalación completada"))
         else:
             if is_appimage:
-                message = _(f"Error al desinstalar Swiftinstall Enhance AppImage - {package_name}.")
+                message = _("Error al desinstalar Swiftinstall Enhance AppImage - {}.").format(package_name)
             else:
-                message = _(f"Error al desinstalar {package_name}.")
+                message = _("Error al desinstalar {}.").format(package_name)
                 
             dialog = Adw.AlertDialog(
                 heading=_("Error en la desinstalación"),
                 body=f"{message}\n\n{error_message or ''}"
             )
-            dialog.add_response("ok", "OK")
+            dialog.add_response("ok", _("OK"))
             dialog.set_default_response("ok")
             self.status_label.set_text(_("Uy... ha habido un error cuando estaba desinstalándote la app"))
         
@@ -1855,7 +1856,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         
         # Header bar al estilo GNOME
         header_bar = Adw.HeaderBar()
-        title_widget = Adw.WindowTitle(title="Swift Install", subtitle=_(f"Versión {CURRENT_VERSION}"))
+        title_widget = Adw.WindowTitle(title="Swift Install", subtitle=_("Versión {}").format(CURRENT_VERSION))
         header_bar.set_title_widget(title_widget)
         header_bar.add_css_class("header-bar")
         
@@ -2109,9 +2110,9 @@ class PackageInstaller(Adw.ApplicationWindow):
             file = dialog.get_file()
             if file:
                 self.file_path = file.get_path()
-                self.selected_file_label.set_text(_(f"Archivo seleccionado: {os.path.basename(self.file_path)}"))
+                self.selected_file_label.set_text(_("Archivo seleccionado: {}").format(os.path.basename(self.file_path)))
                 self.install_button.set_sensitive(True)
-                self.status_label.set_text(_(f"Estoy listo para instalar: {os.path.basename(self.file_path)}"))
+                self.status_label.set_text(_("Estoy listo para instalar: {}").format(os.path.basename(self.file_path)))
         dialog.destroy()
 
     def create_desktop_file(self, app_name):
@@ -2178,9 +2179,9 @@ Categories=Utility;
     def show_no_updates_message(self):
         dialog = Adw.AlertDialog(
             heading=_("Estoy actualizado :)"),
-            body=_(f"Bien hecho, estoy actualizado a la última versión ({CURRENT_VERSION}).")
+            body=_("Bien hecho, estoy actualizado a la última versión ({}).").format(CURRENT_VERSION)
         )
-        dialog.add_response("ok", "OK")
+        dialog.add_response("ok", _("OK"))
         dialog.set_default_response("ok")
         dialog.present(self)
         self.status_label.set_text(_("Empieza seleccionando un archivo que contenga una app"))
@@ -2191,7 +2192,7 @@ Categories=Utility;
             heading=_("He encontrado un error"),
             body=_("Vaya, no he podido comprobar las actualizaciones. ¿Estás conectado a internet?")
         )
-        dialog.add_response("ok", "OK")
+        dialog.add_response("ok", _("OK"))
         dialog.set_default_response("ok")
         dialog.present(self)
         self.status_label.set_text(_("Empieza seleccionando un archivo que contenga una app"))
@@ -2287,13 +2288,13 @@ Categories=Utility;
                 # Mensaje especial para AppImage
                 if self.file_path.lower().endswith('.appimage'):
                     app_name = os.path.basename(self.file_path).replace('.appimage', '')
-                    GLib.idle_add(self.installation_complete, _(f"AppImage instalado como {app_name}. Se ha creado un acceso directo."))
+                    GLib.idle_add(self.installation_complete, _("AppImage instalado como {}. Se ha creado un acceso directo.").format(app_name))
                 else:
                     GLib.idle_add(self.installation_complete, _("He instalado todo bien, ¡disfrútala!"))
             else:
-                GLib.idle_add(self.installation_complete, _(f"Vaya, he encontrado un error al instalar: {stderr}"), True, stderr)
+                GLib.idle_add(self.installation_complete, _("Vaya, he encontrado un error al instalar: {}").format(stderr), True, stderr)
         except Exception as e:
-            GLib.idle_add(self.installation_complete, _(f"Error en la instalación: {str(e)}"), True, "")
+            GLib.idle_add(self.installation_complete, _("Error en la instalación: {}").format(str(e)), True, "")
 
     def run_fix_deps(self, cmd):
         try:
@@ -2752,9 +2753,14 @@ def show_dependencies_dialog(parent_window, missing_deps):
 
 class SwiftInstallApp(Adw.Application):
     def __init__(self):
-        super().__init__(application_id="com.inled.swiftinstall")
+        super().__init__(application_id="com.inled.swiftinstall", flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
         self.connect("activate", self.on_activate)
+        self.connect("command-line", self.on_command_line)
     
+    def on_command_line(self, app, command_line):
+        app.activate()
+        return 0
+
     def on_activate(self, app):
         missing_deps = check_dependencies()
         # Cargar el CSS para el estilo GNOME moderno
@@ -2765,7 +2771,17 @@ class SwiftInstallApp(Adw.Application):
 
 def Component():
     app = SwiftInstallApp()
-    return app.run()
+    return app.run(sys.argv)
 
 if __name__ == "__main__":
-    Component() 
+    try:
+        Component()
+    except Exception as e:
+        import traceback
+        error_log = os.path.expanduser("~/.cache/swiftinstall_error.log")
+        with open(error_log, "w") as f:
+            f.write(f"Error starting SwiftInstall: {str(e)}\n")
+            traceback.print_exc(file=f)
+        # Intentar mostrar dialogo de error con zenity si es posible, o print
+        print(f"Critical error: {e}", file=sys.stderr)
+        sys.exit(1) 

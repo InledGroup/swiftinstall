@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-17 12:59+0100\n"
+"POT-Creation-Date: 2026-01-17 12:49+0100\n"
 "PO-Revision-Date: 2026-01-17 12:49+0100\n"
 "Last-Translator: Jaime Gonzalez Herraiz <CONTACTO@INLED.ES>\n"
 "Language-Team: EN <LL@li.org>\n"
@@ -20,14 +20,6 @@ msgstr ""
 #: start.py:211
 msgid "Actualización disponible"
 msgstr "Update available"
-
-#: start.py:212
-msgid ""
-"Versión actual: {}\n"
-"Nueva versión: {}"
-msgstr ""
-"Current version: {}\n"
-"New version: {}"
 
 #: start.py:213
 msgid "Recordar más tarde"
@@ -121,27 +113,9 @@ msgstr "Select options and press 'Analyze'"
 msgid "Analizando archivos..."
 msgstr "Analyzing files..."
 
-#: start.py:533
-msgid "Análisis completo. Se pueden liberar: {}"
-msgstr "Analysis complete. Can free: {}"
-
 #: start.py:556
 msgid "Autorízame y yo limpio el sistema"
 msgstr "Authorize me and I'll clean the system"
-
-#: start.py:557
-msgid ""
-"Voy a limpiar el sistema.\n"
-"\n"
-"Liberaré aproximadamente: {}\n"
-"\n"
-"Ten en cuenta que esta acción no se puede revertir."
-msgstr ""
-"I'm going to clean the system.\n"
-"\n"
-"I will free approximately: {}\n"
-"\n"
-"Please note that this action cannot be undone."
 
 #: start.py:559 start.py:1064 start.py:1083 start.py:2099
 msgid "Cancelar"
@@ -155,46 +129,18 @@ msgstr "Clean"
 msgid "Limpiando archivos..."
 msgstr "Cleaning files..."
 
-#: start.py:696
-msgid "Limpieza completada. Espacio liberado: {}"
-msgstr "Cleanup completed. Space freed: {}"
-
 #: start.py:700
 msgid "¡Ya he terminado!"
 msgstr "I'm done!"
-
-#: start.py:701
-msgid ""
-"He dejado impoluto tu Linux.\n"
-"\n"
-"He liberado {} que estaban ocupando espacio sin necesidad."
-msgstr ""
-"I've left your Linux spotless.\n"
-"\n"
-"I freed {} that were taking up space unnecessarily."
 
 #: start.py:703 start.py:720 start.py:1826 start.py:1839 start.py:2184
 #: start.py:2195
 msgid "OK"
 msgstr "OK"
 
-#: start.py:714
-msgid "Error en la limpieza: {}"
-msgstr "Cleaning error: {}"
-
 #: start.py:717
 msgid "Error en la limpieza"
 msgstr "Cleaning error"
-
-#: start.py:718
-msgid ""
-"Ocurrió un error durante la limpieza:\n"
-"\n"
-"{}"
-msgstr ""
-"An error occurred during cleanup:\n"
-"\n"
-"{}"
 
 #: start.py:729 start.py:2046
 msgid "Análisis antivirus"
@@ -380,10 +326,6 @@ msgstr "I haven't found any installed applications on your system"
 msgid "No he podido encontrar aplicaciones instaladas en tu sistema"
 msgstr "I couldn't find installed applications on your system"
 
-#: start.py:1736 start.py:1738
-msgid "¿Deseas desinstalar {}?"
-msgstr "Do you want to uninstall {}?"
-
 #: start.py:1741
 msgid "Confirmación"
 msgstr "Confirmation"
@@ -396,32 +338,9 @@ msgstr "No"
 msgid "Sí"
 msgstr "Yes"
 
-#: start.py:1768
-msgid "Desinstalando {}..."
-msgstr "Uninstalling {}..."
-
-#: start.py:1818
-msgid ""
-"{} ha sido desinstalado correctamente. Recuerda borrar los archivos que haya "
-"creado la aplicación."
-msgstr ""
-"{} has been uninstalled successfully. Remember to delete files created by the application."
-
-#: start.py:1820
-msgid "{} ha sido desinstalado correctamente."
-msgstr "{} has been uninstalled successfully."
-
 #: start.py:1823 start.py:1828
 msgid "Desinstalación completada"
 msgstr "Uninstallation completed"
-
-#: start.py:1831
-msgid "Error al desinstalar Swiftinstall Enhance AppImage - {}."
-msgstr "Error uninstalling Swiftinstall Enhance AppImage - {}."
-
-#: start.py:1833
-msgid "Error al desinstalar {}."
-msgstr "Error uninstalling {}."
 
 #: start.py:1836
 msgid "Error en la desinstalación"
@@ -430,10 +349,6 @@ msgstr "Uninstallation error"
 #: start.py:1841
 msgid "Uy... ha habido un error cuando estaba desinstalándote la app"
 msgstr "Oops... there was an error while uninstalling the app"
-
-#: start.py:1859
-msgid "Versión {}"
-msgstr "Version {}"
 
 #: start.py:1865
 msgid "Menú"
@@ -491,21 +406,9 @@ msgstr "Select package"
 msgid "Abrir"
 msgstr "Open"
 
-#: start.py:2113
-msgid "Archivo seleccionado: {}"
-msgstr "Selected file: {}"
-
-#: start.py:2115
-msgid "Estoy listo para instalar: {}"
-msgstr "Ready to install: {}"
-
 #: start.py:2181
 msgid "Estoy actualizado :)"
 msgstr "I'm up to date :)"
-
-#: start.py:2182
-msgid "Bien hecho, estoy actualizado a la última versión ({})."
-msgstr "Well done, I am updated to the latest version ({})."
 
 #: start.py:2192
 msgid "He encontrado un error"
@@ -529,21 +432,9 @@ msgstr "Package format not supported by Swift Install"
 msgid "Corrigiendo errores"
 msgstr "Fixing errors"
 
-#: start.py:2291
-msgid "AppImage instalado como {}. Se ha creado un acceso directo."
-msgstr "AppImage installed as {}. A shortcut has been created."
-
 #: start.py:2293
 msgid "He instalado todo bien, ¡disfrútala!"
 msgstr "I installed everything correctly, enjoy it!"
-
-#: start.py:2295
-msgid "Vaya, he encontrado un error al instalar: {}"
-msgstr "Oops, I found an error installing: {}"
-
-#: start.py:2297
-msgid "Error en la instalación: {}"
-msgstr "Installation error: {}"
 
 #: start.py:2312
 msgid "He arreglado las dependencias"
