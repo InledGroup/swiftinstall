@@ -21,6 +21,8 @@ import gettext
 LOCALE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'locale')
 if not os.path.exists(LOCALE_DIR):
     LOCALE_DIR = '/app/share/locale'  # Fallback for Flatpak
+if not os.path.exists(LOCALE_DIR):
+    LOCALE_DIR = '/usr/share/locale'  # Fallback for system install
 
 try:
     locale.setlocale(locale.LC_ALL, '')
