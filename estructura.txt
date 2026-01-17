@@ -12,3 +12,4 @@ usr
 --pixmaps
 ---swiftinstall.png
 --swiftinstall
+
