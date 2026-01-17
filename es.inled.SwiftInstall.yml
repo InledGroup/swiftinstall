@@ -27,8 +27,7 @@ finish-args:
   - --filesystem=/run/user
   - --filesystem=/media
   - --filesystem=/mnt
-  - --filesystem=/proc
-  - --filesystem=/sys
+
   - --talk-name=org.freedesktop.FileManager1
   - --talk-name=org.freedesktop.DBus
   - --talk-name=org.freedesktop.PackageKit
@@ -85,6 +84,18 @@ modules:
         exec flatpak-spawn --host systemctl "$@"
         EOF
       - chmod +x /app/bin/systemctl
+      - |
+        cat > /app/bin/clamscan << 'EOF'
+        #!/bin/bash
+        exec flatpak-spawn --host clamscan "$@"
+        EOF
+      - chmod +x /app/bin/clamscan
+      - |
+        cat > /app/bin/freshclam << 'EOF'
+        #!/bin/bash
+        exec flatpak-spawn --host freshclam "$@"
+        EOF
+      - chmod +x /app/bin/freshclam
     sources: []
 
   - name: python3-dependencies
@@ -102,6 +113,7 @@ modules:
       - install -Dm755 start.py /app/share/swiftinstall/start.py
       - install -Dm644 styles.css /app/share/swiftinstall/styles.css
       - install -Dm644 appimage.png /app/share/swiftinstall/appimage.png
+      - install -Dm644 locale/en/LC_MESSAGES/swiftinstall.mo /app/share/locale/en/LC_MESSAGES/swiftinstall.mo
       - install -Dm644 es.inled.SwiftInstall.metainfo.xml /app/share/metainfo/es.inled.SwiftInstall.metainfo.xml
       - install -Dm644 swiftinstall/usr/share/applications/es.inled.SwiftInstall.desktop /app/share/applications/es.inled.SwiftInstall.desktop
       - install -Dm644 swiftinstall/usr/share/pixmaps/es.inled.SwiftInstall.png /app/share/icons/hicolor/256x256/apps/es.inled.SwiftInstall.png

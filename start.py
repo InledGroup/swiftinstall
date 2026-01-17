@@ -7,11 +7,29 @@ import os
 import threading
 import webbrowser
 import requests
+import time
 from packaging import version
 
 # Versión actual de la aplicación
-CURRENT_VERSION = "8.0"  # Esto se cambia según haya una nueva release
-GITHUB_REPO = "Inled-Group/swiftinstall"
+CURRENT_VERSION = "9.0"  # Esto se cambia según haya una nueva release
+GITHUB_REPO = "InledGroup/swiftinstall"
+
+import locale
+import gettext
+
+# Configurar localización
+LOCALE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'locale')
+if not os.path.exists(LOCALE_DIR):
+    LOCALE_DIR = '/app/share/locale'  # Fallback for Flatpak
+
+try:
+    locale.setlocale(locale.LC_ALL, '')
+except:
+    pass
+
+gettext.bindtextdomain('swiftinstall', LOCALE_DIR)
+gettext.textdomain('swiftinstall')
+_ = gettext.gettext
 
 # Aplicar CSS para un estilo GNOME moderno
 def load_css():
@@ -187,10 +205,10 @@ def check_for_updates():
 class UpdateDialog(Adw.AlertDialog):
     def __init__(self, parent, latest_version, release_url):
         super().__init__()
-        self.set_heading("Actualización disponible")
-        self.set_body(f"Versión actual: {CURRENT_VERSION}\nNueva versión: {latest_version}")
-        self.add_response("cancel", "Recordar más tarde")
-        self.add_response("update", "Actualizar ahora")
+        self.set_heading(_("Actualización disponible"))
+        self.set_body(_(f"Versión actual: {CURRENT_VERSION}\nNueva versión: {latest_version}"))
+        self.add_response("cancel", _("Recordar más tarde"))
+        self.add_response("update", _("Actualizar ahora"))
         self.set_response_appearance("update", Adw.ResponseAppearance.SUGGESTED)
         self.set_default_response("update")
         self.set_close_response("cancel")
@@ -200,7 +218,7 @@ class UpdateDialog(Adw.AlertDialog):
 class SystemCleanupWindow(Adw.Window):
     def __init__(self, parent):
         super().__init__()
-        self.set_title("Limpiar sistema")
+        self.set_title(_("Limpiar sistema"))
         
         # Obtener tamaño seguro de ventana
         width, height = get_safe_window_size(600, 500, 0.8)
@@ -212,7 +230,7 @@ class SystemCleanupWindow(Adw.Window):
 
         # Header bar al estilo GNOME
         header_bar = Adw.HeaderBar()
-        header_bar.set_title_widget(Adw.WindowTitle(title="Limpiar sistema"))
+        header_bar.set_title_widget(Adw.WindowTitle(title=_("Limpiar sistema")))
         header_bar.add_css_class("header-bar")
 
         # Contenido principal en un ToolbarView
@@ -246,12 +264,12 @@ class SystemCleanupWindow(Adw.Window):
         icon = Gtk.Image.new_from_icon_name("edit-clear-all-symbolic")
         title_box.prepend(icon)
         
-        title_label = Gtk.Label(label="Limpieza del sistema")
+        title_label = Gtk.Label(label=_("Limpieza del sistema"))
         title_label.add_css_class("title-label")
         title_box.append(title_label)
         main_box.append(title_box)
         
-        desc_label = Gtk.Label(label="Dime qué quieres que limpie y te dejo el sistema reluciente")
+        desc_label = Gtk.Label(label=_("Dime qué quieres que limpie y te dejo el sistema reluciente"))
         desc_label.add_css_class("subtitle-label")
         main_box.append(desc_label)
 
@@ -259,7 +277,7 @@ class SystemCleanupWindow(Adw.Window):
         directories_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         directories_section.add_css_class("card")
         
-        dir_title = Gtk.Label(label="Directorios a limpiar")
+        dir_title = Gtk.Label(label=_("Directorios a limpiar"))
         dir_title.add_css_class("title-label")
         directories_section.append(dir_title)
 
@@ -268,14 +286,14 @@ class SystemCleanupWindow(Adw.Window):
         
         # Definir directorios comunes para limpiar
         self.cleanup_directories = {
-            "~/.cache": "Caché de aplicaciones del usuario",
-            "~/.local/share/Trash": "Papelera del usuario",
-            "/tmp": "Archivos temporales del sistema",
-            "~/.thumbnails": "Miniaturas de imágenes",
-            "/var/tmp": "Archivos temporales variables", 
-            "~/.config/*/logs": "Logs de aplicaciones",
-            "/var/log": "Logs del sistema (requiere privilegios)",
-            "~/.local/share/recently-used.xbel": "Lista de archivos recientes"
+            "~/.cache": _("Caché de aplicaciones del usuario"),
+            "~/.local/share/Trash": _("Papelera del usuario"),
+            "/tmp": _("Archivos temporales del sistema"),
+            "~/.thumbnails": _("Miniaturas de imágenes"),
+            "/var/tmp": _("Archivos temporales variables"), 
+            "~/.config/*/logs": _("Logs de aplicaciones"),
+            "/var/log": _("Logs del sistema (requiere privilegios)"),
+            "~/.local/share/recently-used.xbel": _("Lista de archivos recientes")
         }
         
         for directory, description in self.cleanup_directories.items():
@@ -306,7 +324,7 @@ class SystemCleanupWindow(Adw.Window):
         advanced_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         advanced_section.add_css_class("card")
         
-        adv_title = Gtk.Label(label="Opciones avanzadas")
+        adv_title = Gtk.Label(label=_("Opciones avanzadas"))
         adv_title.add_css_class("title-label")
         advanced_section.append(adv_title)
 
@@ -317,11 +335,11 @@ class SystemCleanupWindow(Adw.Window):
         orphan_box.prepend(self.orphan_check)
         
         orphan_info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        orphan_label = Gtk.Label(label="Eliminar paquetes huérfanos", xalign=0)
+        orphan_label = Gtk.Label(label=_("Eliminar paquetes huérfanos"), xalign=0)
         orphan_label.add_css_class("title-label")
         orphan_info.append(orphan_label)
         
-        orphan_desc = Gtk.Label(label="Paquetes que ya no son necesarios", xalign=0)
+        orphan_desc = Gtk.Label(label=_("Paquetes que ya no son necesarios"), xalign=0)
         orphan_desc.add_css_class("subtitle-label")
         orphan_info.append(orphan_desc)
         
@@ -335,11 +353,11 @@ class SystemCleanupWindow(Adw.Window):
         apt_box.prepend(self.apt_check)
         
         apt_info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        apt_label = Gtk.Label(label="Limpiar caché de APT", xalign=0)
+        apt_label = Gtk.Label(label=_("Limpiar caché de APT"), xalign=0)
         apt_label.add_css_class("title-label")
         apt_info.append(apt_label)
         
-        apt_desc = Gtk.Label(label="Archivos .deb descargados", xalign=0)
+        apt_desc = Gtk.Label(label=_("Archivos .deb descargados"), xalign=0)
         apt_desc.add_css_class("subtitle-label")
         apt_info.append(apt_desc)
         
@@ -357,7 +375,7 @@ class SystemCleanupWindow(Adw.Window):
         analyze_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         analyze_icon = Gtk.Image.new_from_icon_name("document-properties-symbolic")
         analyze_box.prepend(analyze_icon)
-        analyze_label = Gtk.Label(label="Analizar")
+        analyze_label = Gtk.Label(label=_("Analizar"))
         analyze_box.append(analyze_label)
         self.analyze_button.set_child(analyze_box)
         self.analyze_button.add_css_class("secondary-button")
@@ -369,7 +387,7 @@ class SystemCleanupWindow(Adw.Window):
         clean_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         clean_icon = Gtk.Image.new_from_icon_name("edit-clear-all-symbolic")
         clean_box.prepend(clean_icon)
-        clean_label = Gtk.Label(label="Limpiar ahora")
+        clean_label = Gtk.Label(label=_("Limpiar ahora"))
         clean_box.append(clean_label)
         self.clean_button.set_child(clean_box)
         self.clean_button.add_css_class("action-button")
@@ -386,7 +404,7 @@ class SystemCleanupWindow(Adw.Window):
         main_box.append(self.progress_bar)
 
         # Etiqueta de estado
-        self.status_label = Gtk.Label(label="Selecciona las opciones y presiona 'Analizar'")
+        self.status_label = Gtk.Label(label=_("Selecciona las opciones y presiona 'Analizar'"))
         self.status_label.add_css_class("status-label")
         main_box.append(self.status_label)
 
@@ -400,7 +418,7 @@ class SystemCleanupWindow(Adw.Window):
         self.clean_button.set_sensitive(False)
         self.progress_bar.set_visible(True)
         self.progress_bar.set_fraction(0.0)
-        self.status_label.set_text("Analizando archivos...")
+        self.status_label.set_text(_("Analizando archivos..."))
         
         thread = threading.Thread(target=self.analyze_cleanup)
         thread.daemon = True
@@ -509,7 +527,7 @@ class SystemCleanupWindow(Adw.Window):
         
         # Formatear el tamaño total
         size_str = self.format_size(self.total_size)
-        self.status_label.set_text(f"Análisis completo. Se pueden liberar: {size_str}")
+        self.status_label.set_text(_(f"Análisis completo. Se pueden liberar: {size_str}"))
         
         return False
 
@@ -517,7 +535,7 @@ class SystemCleanupWindow(Adw.Window):
         """Se ejecuta si hay un error en el análisis."""
         self.progress_bar.set_visible(False)
         self.analyze_button.set_sensitive(True)
-        self.status_label.set_text(f"Error en el análisis: {error_msg}")
+        self.status_label.set_text(_(f"Error en el análisis: {error_msg}"))
         return False
 
     def format_size(self, size_bytes):
@@ -532,11 +550,11 @@ class SystemCleanupWindow(Adw.Window):
         """Inicia el proceso de limpieza."""
         # Confirmar la limpieza
         dialog = Adw.AlertDialog(
-            heading="Autorízame y yo limpio el sistema",
-            body=f"Voy a limpiar el sistema.\n\nLiberaré aproximadamente: {self.format_size(self.total_size)}\n\nTen en cuenta que esta acción no se puede revertir."
+            heading=_("Autorízame y yo limpio el sistema"),
+            body=_(f"Voy a limpiar el sistema.\n\nLiberaré aproximadamente: {self.format_size(self.total_size)}\n\nTen en cuenta que esta acción no se puede revertir.")
         )
-        dialog.add_response("cancel", "Cancelar")
-        dialog.add_response("clean", "Limpiar")
+        dialog.add_response("cancel", _("Cancelar"))
+        dialog.add_response("clean", _("Limpiar"))
         dialog.set_response_appearance("clean", Adw.ResponseAppearance.DESTRUCTIVE)
         dialog.set_default_response("cancel")
         dialog.set_close_response("cancel")
@@ -558,7 +576,7 @@ class SystemCleanupWindow(Adw.Window):
         self.clean_button.set_sensitive(False)
         self.progress_bar.set_visible(True)
         self.progress_bar.set_fraction(0.0)
-        self.status_label.set_text("Limpiando archivos...")
+        self.status_label.set_text(_("Limpiando archivos..."))
         
         thread = threading.Thread(target=self.perform_cleanup)
         thread.daemon = True
@@ -672,12 +690,12 @@ class SystemCleanupWindow(Adw.Window):
         self.clean_button.set_sensitive(False)
         
         size_str = self.format_size(cleaned_size)
-        self.status_label.set_text(f"Limpieza completada. Espacio liberado: {size_str}")
+        self.status_label.set_text(_(f"Limpieza completada. Espacio liberado: {size_str}"))
         
         # Mostrar diálogo de completado
         dialog = Adw.AlertDialog(
-            heading="¡Ya he terminado!",
-            body=f"He dejado impoluto tu Linux.\n\nHe liberado {size_str} que estaban ocupando espacio sin necesidad."
+            heading=_("¡Ya he terminado!"),
+            body=_(f"He dejado impoluto tu Linux.\n\nHe liberado {size_str} que estaban ocupando espacio sin necesidad.")
         )
         dialog.add_response("ok", "OK")
         dialog.set_default_response("ok")
@@ -690,11 +708,11 @@ class SystemCleanupWindow(Adw.Window):
         self.progress_bar.set_visible(False)
         self.analyze_button.set_sensitive(True)
         self.clean_button.set_sensitive(True)
-        self.status_label.set_text(f"Error en la limpieza: {error_msg}")
+        self.status_label.set_text(_(f"Error en la limpieza: {error_msg}"))
         
         dialog = Adw.AlertDialog(
-            heading="Error en la limpieza",
-            body=f"Ocurrió un error durante la limpieza:\n\n{error_msg}"
+            heading=_("Error en la limpieza"),
+            body=_(f"Ocurrió un error durante la limpieza:\n\n{error_msg}")
         )
         dialog.add_response("ok", "OK")
         dialog.set_default_response("ok")
@@ -705,7 +723,7 @@ class SystemCleanupWindow(Adw.Window):
 class AntivirusWindow(Adw.Window):
     def __init__(self, parent):
         super().__init__()
-        self.set_title("Análisis antivirus")
+        self.set_title(_("Análisis antivirus"))
         
         # Obtener tamaño seguro de ventana
         width, height = get_safe_window_size(650, 600, 0.85)
@@ -717,7 +735,7 @@ class AntivirusWindow(Adw.Window):
 
         # Header bar al estilo GNOME
         header_bar = Adw.HeaderBar()
-        header_bar.set_title_widget(Adw.WindowTitle(title="Análisis de virus"))
+        header_bar.set_title_widget(Adw.WindowTitle(title=_("Análisis de virus")))
         header_bar.add_css_class("header-bar")
 
         # Contenido principal en un ToolbarView
@@ -751,12 +769,12 @@ class AntivirusWindow(Adw.Window):
         icon = Gtk.Image.new_from_icon_name("security-high-symbolic")
         title_box.prepend(icon)
         
-        title_label = Gtk.Label(label="Puedo analizar tu sistema en busca de virus.")
+        title_label = Gtk.Label(label=_("Puedo analizar tu sistema en busca de virus."))
         title_label.add_css_class("title-label")
         title_box.append(title_label)
         main_box.append(title_box)
         
-        desc_label = Gtk.Label(label="Protege tu sistema con análisis antivirus")
+        desc_label = Gtk.Label(label=_("Protege tu sistema con análisis antivirus"))
         desc_label.add_css_class("subtitle-label")
         main_box.append(desc_label)
 
@@ -764,11 +782,11 @@ class AntivirusWindow(Adw.Window):
         status_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         status_section.add_css_class("card")
         
-        status_title = Gtk.Label(label="Estado del antivirus")
+        status_title = Gtk.Label(label=_("Estado del antivirus"))
         status_title.add_css_class("title-label")
         status_section.append(status_title)
 
-        self.clam_status_label = Gtk.Label(label="Verificando ClamAV...")
+        self.clam_status_label = Gtk.Label(label=_("Verificando ClamAV..."))
         self.clam_status_label.add_css_class("subtitle-label")
         status_section.append(self.clam_status_label)
 
@@ -777,7 +795,7 @@ class AntivirusWindow(Adw.Window):
         install_clam_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         install_clam_icon = Gtk.Image.new_from_icon_name("emblem-system-symbolic")
         install_clam_box.prepend(install_clam_icon)
-        install_clam_label = Gtk.Label(label="Instalar ClamAV")
+        install_clam_label = Gtk.Label(label=_("Instalar ClamAV"))
         install_clam_box.append(install_clam_label)
         self.install_clam_button.set_child(install_clam_box)
         self.install_clam_button.add_css_class("action-button")
@@ -791,14 +809,14 @@ class AntivirusWindow(Adw.Window):
         config_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         config_section.add_css_class("card")
         
-        config_title = Gtk.Label(label="Configuración del análisis")
+        config_title = Gtk.Label(label=_("Configuración del análisis"))
         config_title.add_css_class("title-label")
         config_section.append(config_title)
 
         # Tipo de análisis
         scan_type_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         
-        scan_type_label = Gtk.Label(label="Tipo de análisis:", xalign=0)
+        scan_type_label = Gtk.Label(label=_("Tipo de análisis:"), xalign=0)
         scan_type_label.add_css_class("title-label")
         scan_type_box.append(scan_type_label)
 
@@ -808,10 +826,10 @@ class AntivirusWindow(Adw.Window):
         quick_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         quick_box.prepend(self.quick_scan_radio)
         quick_info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        quick_title = Gtk.Label(label="Análisis rápido", xalign=0)
+        quick_title = Gtk.Label(label=_("Análisis rápido"), xalign=0)
         quick_title.add_css_class("title-label")
         quick_info.append(quick_title)
-        quick_desc = Gtk.Label(label="Carpetas importantes del usuario (~, /tmp, /var/tmp)", xalign=0)
+        quick_desc = Gtk.Label(label=_("Carpetas importantes del usuario (~, /tmp, /var/tmp)"), xalign=0)
         quick_desc.add_css_class("subtitle-label")
         quick_info.append(quick_desc)
         quick_box.append(quick_info)
@@ -822,10 +840,10 @@ class AntivirusWindow(Adw.Window):
         full_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         full_box.prepend(self.full_scan_radio)
         full_info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        full_title = Gtk.Label(label="Análisis completo", xalign=0)
+        full_title = Gtk.Label(label=_("Análisis completo"), xalign=0)
         full_title.add_css_class("title-label")
         full_info.append(full_title)
-        full_desc = Gtk.Label(label="Todo el sistema (puedo estar bastante rato trabajando)", xalign=0)
+        full_desc = Gtk.Label(label=_("Todo el sistema (puedo estar bastante rato trabajando)"), xalign=0)
         full_desc.add_css_class("subtitle-label")
         full_info.append(full_desc)
         full_box.append(full_info)
@@ -836,10 +854,10 @@ class AntivirusWindow(Adw.Window):
         custom_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         custom_box.prepend(self.custom_scan_radio)
         custom_info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        custom_title = Gtk.Label(label="Análisis personalizado", xalign=0)
+        custom_title = Gtk.Label(label=_("Análisis personalizado"), xalign=0)
         custom_title.add_css_class("title-label")
         custom_info.append(custom_title)
-        custom_desc = Gtk.Label(label="Selecciona los directorios que quieres que analice", xalign=0)
+        custom_desc = Gtk.Label(label=_("Selecciona los directorios que quieres que analice"), xalign=0)
         custom_desc.add_css_class("subtitle-label")
         custom_info.append(custom_desc)
         custom_box.append(custom_info)
@@ -850,7 +868,7 @@ class AntivirusWindow(Adw.Window):
         # Directorio personalizado
         self.custom_dir_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         self.custom_dir_entry = Gtk.Entry()
-        self.custom_dir_entry.set_placeholder_text("Ruta del directorio a analizar...")
+        self.custom_dir_entry.set_placeholder_text(_("Ruta del directorio a analizar..."))
         self.custom_dir_entry.set_text(os.path.expanduser("~"))
         self.custom_dir_box.append(self.custom_dir_entry)
         
@@ -872,7 +890,7 @@ class AntivirusWindow(Adw.Window):
         advanced_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         advanced_section.add_css_class("card")
         
-        adv_title = Gtk.Label(label="Opciones avanzadas")
+        adv_title = Gtk.Label(label=_("Opciones avanzadas"))
         adv_title.add_css_class("title-label")
         advanced_section.append(adv_title)
 
@@ -883,11 +901,11 @@ class AntivirusWindow(Adw.Window):
         update_box.prepend(self.update_defs_check)
         
         update_info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        update_label = Gtk.Label(label="Actualizar definiciones antes del análisis", xalign=0)
+        update_label = Gtk.Label(label=_("Actualizar definiciones antes del análisis"), xalign=0)
         update_label.add_css_class("title-label")
         update_info.append(update_label)
         
-        update_desc = Gtk.Label(label="Descargar las últimas actualizaciones de definiciones de virus para detectarles mejor", xalign=0)
+        update_desc = Gtk.Label(label=_("Descargar las últimas actualizaciones de definiciones de virus para detectarles mejor"), xalign=0)
         update_desc.add_css_class("subtitle-label")
         update_info.append(update_desc)
         
@@ -900,11 +918,11 @@ class AntivirusWindow(Adw.Window):
         deep_box.prepend(self.deep_scan_check)
         
         deep_info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        deep_label = Gtk.Label(label="Análisis profundo", xalign=0)
+        deep_label = Gtk.Label(label=_("Análisis profundo"), xalign=0)
         deep_label.add_css_class("title-label")
         deep_info.append(deep_label)
         
-        deep_desc = Gtk.Label(label="Incluir archivos comprimidos y análisis heurístico", xalign=0)
+        deep_desc = Gtk.Label(label=_("Incluir archivos comprimidos y análisis heurístico"), xalign=0)
         deep_desc.add_css_class("subtitle-label")
         deep_info.append(deep_desc)
         
@@ -922,7 +940,7 @@ class AntivirusWindow(Adw.Window):
         update_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         update_icon = Gtk.Image.new_from_icon_name("view-refresh-symbolic")
         update_box.prepend(update_icon)
-        update_label = Gtk.Label(label="Actualizar")
+        update_label = Gtk.Label(label=_("Actualizar"))
         update_box.append(update_label)
         self.update_button.set_child(update_box)
         self.update_button.add_css_class("secondary-button")
@@ -934,7 +952,7 @@ class AntivirusWindow(Adw.Window):
         scan_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         scan_icon = Gtk.Image.new_from_icon_name("security-high-symbolic")
         scan_box.prepend(scan_icon)
-        scan_label = Gtk.Label(label="Iniciar análisis")
+        scan_label = Gtk.Label(label=_("Iniciar análisis"))
         scan_box.append(scan_label)
         self.scan_button.set_child(scan_box)
         self.scan_button.add_css_class("action-button")
@@ -950,7 +968,7 @@ class AntivirusWindow(Adw.Window):
         main_box.append(self.progress_bar)
 
         # Etiqueta de estado
-        self.status_label = Gtk.Label(label="Listo para iniciar análisis")
+        self.status_label = Gtk.Label(label=_("Listo para iniciar análisis"))
         self.status_label.add_css_class("status-label")
         main_box.append(self.status_label)
 
@@ -958,7 +976,7 @@ class AntivirusWindow(Adw.Window):
         results_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         results_section.add_css_class("card")
         
-        results_title = Gtk.Label(label="Resultados del análisis")
+        results_title = Gtk.Label(label=_("Resultados del análisis"))
         results_title.add_css_class("title-label")
         results_section.append(results_title)
 
@@ -1036,11 +1054,11 @@ class AntivirusWindow(Adw.Window):
     def on_browse_clicked(self, button):
         """Abre un diálogo para seleccionar directorio."""
         dialog = Gtk.FileChooserNative(
-            title="Seleccionar directorio para análisis",
+            title=_("Seleccionar directorio para análisis"),
             transient_for=self,
             action=Gtk.FileChooserAction.SELECT_FOLDER,
-            accept_label="Seleccionar",
-            cancel_label="Cancelar"
+            accept_label=_("Seleccionar"),
+            cancel_label=_("Cancelar")
         )
         dialog.connect("response", self._on_folder_dialog_response)
         dialog.show()
@@ -1056,11 +1074,11 @@ class AntivirusWindow(Adw.Window):
     def on_install_clam_clicked(self, button):
         """Instala ClamAV."""
         dialog = Adw.AlertDialog(
-            heading="Instalar ClamAV",
-            body="¿Quieres instalar ClamAV y sus definiciones de virus?\n\nEsto puede tardar varios minutos y requiere conexión a internet."
+            heading=_("Instalar ClamAV"),
+            body=_("¿Quieres instalar ClamAV y sus definiciones de virus?\n\nEsto puede tardar varios minutos y requiere conexión a internet.")
         )
-        dialog.add_response("cancel", "Cancelar")
-        dialog.add_response("install", "Instalar")
+        dialog.add_response("cancel", _("Cancelar"))
+        dialog.add_response("install", _("Instalar"))
         dialog.set_response_appearance("install", Adw.ResponseAppearance.SUGGESTED)
         dialog.set_default_response("install")
         dialog.set_close_response("cancel")
@@ -1081,7 +1099,7 @@ class AntivirusWindow(Adw.Window):
         self.install_clam_button.set_sensitive(False)
         self.progress_bar.set_visible(True)
         self.progress_bar.set_fraction(0.0)
-        self.status_label.set_text("Instalando ClamAV...")
+        self.status_label.set_text(_("Instalando ClamAV..."))
         
         thread = threading.Thread(target=self.install_clam_thread)
         thread.daemon = True
@@ -1173,11 +1191,11 @@ class AntivirusWindow(Adw.Window):
         self.install_clam_button.set_sensitive(True)
         
         if success:
-            self.status_label.set_text("ClamAV instalado correctamente")
+            self.status_label.set_text(_("ClamAV instalado correctamente"))
             # Volver a verificar el estado
             GLib.timeout_add(1000, self.check_clamav_status)
         else:
-            self.status_label.set_text(f"Error instalando ClamAV: {error_msg}")
+            self.status_label.set_text(_(f"Error instalando ClamAV: {error_msg}"))
             
         return False
 
@@ -1187,7 +1205,7 @@ class AntivirusWindow(Adw.Window):
         self.scan_button.set_sensitive(False)
         self.progress_bar.set_visible(True)
         self.progress_bar.set_fraction(0.0)
-        self.status_label.set_text("Actualizando definiciones de virus...")
+        self.status_label.set_text(_("Actualizando definiciones de virus..."))
         
         thread = threading.Thread(target=self.update_definitions_thread)
         thread.daemon = True
@@ -1230,9 +1248,9 @@ class AntivirusWindow(Adw.Window):
         self.scan_button.set_sensitive(True)
         
         if success:
-            self.status_label.set_text("Definiciones actualizadas correctamente")
+            self.status_label.set_text(_("Definiciones actualizadas correctamente"))
         else:
-            self.status_label.set_text(f"Error actualizando definiciones: {error_msg}")
+            self.status_label.set_text(_(f"Error actualizando definiciones: {error_msg}"))
             
         return False
 
@@ -1259,7 +1277,7 @@ class AntivirusWindow(Adw.Window):
         self.update_button.set_sensitive(False)
         self.progress_bar.set_visible(True)
         self.progress_bar.set_fraction(0.0)
-        self.status_label.set_text("Iniciando análisis antivirus...")
+        self.status_label.set_text(_("Iniciando análisis antivirus..."))
         
         # Limpiar resultados anteriores
         buffer = self.results_text.get_buffer()
@@ -1370,12 +1388,12 @@ class AntivirusWindow(Adw.Window):
     def show_threat_dialog(self, threat_count):
         """Muestra diálogo cuando se encuentran amenazas."""
         dialog = Adw.AlertDialog(
-            heading="⚠️ ¡Cuidado!",
-            body=f"He detectado {threat_count} amenazas en tu sistema.\n\n¿Qué quieres hacer?"
+            heading=_("⚠️ ¡Cuidado!"),
+            body=_(f"He detectado {threat_count} amenazas en tu sistema.\n\n¿Qué quieres hacer?")
         )
-        dialog.add_response("ignore", "Ignorar")
-        dialog.add_response("quarantine", "Poner en cuarentena")
-        dialog.add_response("delete", "Eliminar amenazas")
+        dialog.add_response("ignore", _("Ignorar"))
+        dialog.add_response("quarantine", _("Poner en cuarentena"))
+        dialog.add_response("delete", _("Eliminar amenazas"))
         dialog.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
         dialog.set_response_appearance("quarantine", Adw.ResponseAppearance.SUGGESTED)
         dialog.set_default_response("quarantine")
@@ -1403,7 +1421,7 @@ class AntivirusWindow(Adw.Window):
         self.progress_bar.set_visible(False)
         self.scan_button.set_sensitive(True)
         self.update_button.set_sensitive(True)
-        self.status_label.set_text(f"Error en el análisis: {error_msg}")
+        self.status_label.set_text(_(f"Error en el análisis: {error_msg}"))
         GLib.idle_add(self.append_result, f"\n❌ Error: {error_msg}\n")
         return False
 
@@ -1422,7 +1440,7 @@ class InstalledAppsWindow(Adw.Window):
 
         # Header bar al estilo GNOME
         header_bar = Adw.HeaderBar()
-        header_bar.set_title_widget(Adw.WindowTitle(title="Aplicaciones instaladas"))
+        header_bar.set_title_widget(Adw.WindowTitle(title=_("Aplicaciones instaladas")))
         header_bar.add_css_class("header-bar")
 
         # Contenido principal en un ToolbarView
@@ -1457,7 +1475,7 @@ class InstalledAppsWindow(Adw.Window):
         search_box.prepend(search_icon)
         
         self.search_entry = Gtk.SearchEntry()
-        self.search_entry.set_placeholder_text("Buscar aplicaciones...")
+        self.search_entry.set_placeholder_text(_("Buscar aplicaciones..."))
         self.search_entry.connect("search-changed", self.on_search_changed)
         self.search_entry.add_css_class("search-entry")
         search_box.append(self.search_entry)
@@ -1620,7 +1638,7 @@ class InstalledAppsWindow(Adw.Window):
         vbox.append(label)
         
         # Etiqueta para el tipo
-        type_label = Gtk.Label(label="AppImage" if is_appimage else "Paquete instalado", xalign=0)
+        type_label = Gtk.Label(label=_("AppImage") if is_appimage else _("Paquete instalado"), xalign=0)
         type_label.add_css_class("subtitle-label")
         vbox.append(type_label)
         
@@ -1628,7 +1646,7 @@ class InstalledAppsWindow(Adw.Window):
         
         # Botón de desinstalar con icono
         button = Gtk.Button()
-        button.set_tooltip_text("Desinstalar")
+        button.set_tooltip_text(_("Desinstalar"))
         button.add_css_class("destructive-button")
         
         button_icon = Gtk.Image.new_from_icon_name("user-trash-symbolic")
@@ -1649,7 +1667,7 @@ class InstalledAppsWindow(Adw.Window):
         icon = Gtk.Image.new_from_icon_name("dialog-information-symbolic")
         box.append(icon)
         
-        label = Gtk.Label(label="No he encontrado aplicaciones instaladas en tu sistema")
+        label = Gtk.Label(label=_("No he encontrado aplicaciones instaladas en tu sistema"))
         label.get_style_context().add_class("title-label")
         box.append(label)
         
@@ -1678,7 +1696,7 @@ class InstalledAppsWindow(Adw.Window):
         icon = Gtk.Image.new_from_icon_name("dialog-error-symbolic")
         box.append(icon)
         
-        label = Gtk.Label(label="No he podido encontrar aplicaciones instaladas en tu sistema")
+        label = Gtk.Label(label=_("No he podido encontrar aplicaciones instaladas en tu sistema"))
         label.get_style_context().add_class("title-label")
         box.append(label)
         
@@ -1712,16 +1730,16 @@ class InstalledAppsWindow(Adw.Window):
     # Aviso desinstalación
     def on_uninstall_clicked(self, button, package_name, is_appimage=False):
         if is_appimage:
-            message = f"¿Deseas desinstalar {package_name}?"
+            message = _(f"¿Deseas desinstalar {package_name}?")
         else:
-            message = f"¿Deseas desinstalar {package_name}?"
+            message = _(f"¿Deseas desinstalar {package_name}?")
             
         dialog = Adw.AlertDialog(
-            heading="Confirmación",
+            heading=_("Confirmación"),
             body=message
         )
-        dialog.add_response("no", "No")
-        dialog.add_response("yes", "Sí")
+        dialog.add_response("no", _("No"))
+        dialog.add_response("yes", _("Sí"))
         dialog.set_response_appearance("yes", Adw.ResponseAppearance.DESTRUCTIVE)
         dialog.set_default_response("no")
         dialog.set_close_response("no")
@@ -1744,7 +1762,7 @@ class InstalledAppsWindow(Adw.Window):
     def uninstall_package(self, package_name, is_appimage=False):
         self.progress_bar.set_fraction(0.0)
         self.progress_bar.set_visible(True)
-        self.status_label.set_text(f"Desinstalando {package_name}...")
+        self.status_label.set_text(_(f"Desinstalando {package_name}..."))
         
         if is_appimage:
             # Eliminar el AppImage y su archivo .desktop
@@ -1794,30 +1812,30 @@ class InstalledAppsWindow(Adw.Window):
         
         if success:
             if is_appimage:
-                message = f"{package_name} ha sido desinstalado correctamente. Recuerda borrar los archivos que haya creado la aplicación."
+                message = _(f"{package_name} ha sido desinstalado correctamente. Recuerda borrar los archivos que haya creado la aplicación.")
             else:
-                message = f"{package_name} ha sido desinstalado correctamente."
+                message = _(f"{package_name} ha sido desinstalado correctamente.")
                 
             dialog = Adw.AlertDialog(
-                heading="Desinstalación completada",
+                heading=_("Desinstalación completada"),
                 body=message
             )
             dialog.add_response("ok", "OK")
             dialog.set_default_response("ok")
-            self.status_label.set_text("Desinstalación completada")
+            self.status_label.set_text(_("Desinstalación completada"))
         else:
             if is_appimage:
-                message = f"Error al desinstalar Swiftinstall Enhance AppImage - {package_name}."
+                message = _(f"Error al desinstalar Swiftinstall Enhance AppImage - {package_name}.")
             else:
-                message = f"Error al desinstalar {package_name}."
+                message = _(f"Error al desinstalar {package_name}.")
                 
             dialog = Adw.AlertDialog(
-                heading="Error en la desinstalación",
+                heading=_("Error en la desinstalación"),
                 body=f"{message}\n\n{error_message or ''}"
             )
             dialog.add_response("ok", "OK")
             dialog.set_default_response("ok")
-            self.status_label.set_text("Uy... ha habido un error cuando estaba desinstalándote la app")
+            self.status_label.set_text(_("Uy... ha habido un error cuando estaba desinstalándote la app"))
         
         
         dialog.present(self)
@@ -1835,13 +1853,13 @@ class PackageInstaller(Adw.ApplicationWindow):
         
         # Header bar al estilo GNOME
         header_bar = Adw.HeaderBar()
-        title_widget = Adw.WindowTitle(title="Swift Install", subtitle=f"Versión {CURRENT_VERSION}")
+        title_widget = Adw.WindowTitle(title="Swift Install", subtitle=_(f"Versión {CURRENT_VERSION}"))
         header_bar.set_title_widget(title_widget)
         header_bar.add_css_class("header-bar")
         
         # Botón de menú en la header bar
         menu_button = Gtk.MenuButton()
-        menu_button.set_tooltip_text("Menú")
+        menu_button.set_tooltip_text(_("Menú"))
         icon = Gtk.Image.new_from_icon_name("open-menu-symbolic")
         menu_button.set_child(icon)
         
@@ -1854,15 +1872,15 @@ class PackageInstaller(Adw.ApplicationWindow):
         popover_box.set_margin_end(10)
         
         # Elementos del menú
-        about_button = Gtk.Button(label="Acerca de Swift Install")
+        about_button = Gtk.Button(label=_("Acerca de Swift Install"))
         about_button.connect("clicked", self.on_about_clicked)
         popover_box.append(about_button)
         
-        report_button = Gtk.Button(label="Reportar un error")
+        report_button = Gtk.Button(label=_("Reportar un error"))
         report_button.connect("clicked", self.on_report_issue)
         popover_box.append(report_button)
         
-        update_button = Gtk.Button(label="Buscar actualizaciones")
+        update_button = Gtk.Button(label=_("Buscar actualizaciones"))
         update_button.connect("clicked", self.on_check_updates_clicked)
         popover_box.append(update_button)
         
@@ -1906,7 +1924,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         icon = Gtk.Image.new_from_icon_name("package-x-generic-symbolic")
         title_box.prepend(icon)
         
-        title_label = Gtk.Label(label="¿Qué debo instalar?")
+        title_label = Gtk.Label(label=_("¿Qué debo instalar?"))
         title_label.add_css_class("title-label")
         title_box.append(title_label)
         
@@ -1919,7 +1937,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         file_icon = Gtk.Image.new_from_icon_name("document-open-symbolic")
         file_chooser_box.append(file_icon)
         
-        file_label = Gtk.Label(label="Selecciona el archivo que debo instalar")
+        file_label = Gtk.Label(label=_("Selecciona el archivo que debo instalar"))
         file_label.add_css_class("subtitle-label")
         file_chooser_box.append(file_label)
         
@@ -1930,7 +1948,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         file_section.append(file_chooser_button)
         
         # Etiqueta para mostrar el archivo seleccionado
-        self.selected_file_label = Gtk.Label(label="Aún no has seleccionado ningún archivo")
+        self.selected_file_label = Gtk.Label(label=_("Aún no has seleccionado ningún archivo"))
         self.selected_file_label.add_css_class("subtitle-label")
         file_section.append(self.selected_file_label)
         
@@ -1945,7 +1963,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         actions_icon = Gtk.Image.new_from_icon_name("preferences-other-symbolic")
         actions_title_box.prepend(actions_icon)
         
-        actions_title_label = Gtk.Label(label="Acciones")
+        actions_title_label = Gtk.Label(label=_("Acciones"))
         actions_title_label.add_css_class("title-label")
         actions_title_box.append(actions_title_label)
         
@@ -1961,7 +1979,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         install_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         install_icon = Gtk.Image.new_from_icon_name("emblem-system-symbolic")
         install_box.prepend(install_icon)
-        install_label = Gtk.Label(label="Instalar")
+        install_label = Gtk.Label(label=_("Instalar"))
         install_box.append(install_label)
         self.install_button.set_child(install_box)
         self.install_button.connect("clicked", self.on_install_clicked)
@@ -1974,7 +1992,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         fix_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         fix_icon = Gtk.Image.new_from_icon_name("applications-utilities-symbolic")
         fix_box.prepend(fix_icon)
-        fix_label = Gtk.Label(label="Corregir errores")
+        fix_label = Gtk.Label(label=_("Corregir errores"))
         fix_box.append(fix_label)
         self.fix_deps_button.set_child(fix_box)
         self.fix_deps_button.connect("clicked", self.on_fix_deps_clicked)
@@ -1992,7 +2010,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         apps_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         apps_icon = Gtk.Image.new_from_icon_name("user-trash-symbolic")
         apps_box.prepend(apps_icon)
-        apps_label = Gtk.Label(label="Eliminar apps")
+        apps_label = Gtk.Label(label=_("Eliminar apps"))
         apps_box.append(apps_label)
         self.apps_button.set_child(apps_box)
         self.apps_button.connect("clicked", self.on_apps_clicked)
@@ -2004,7 +2022,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         clean_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         clean_icon = Gtk.Image.new_from_icon_name("edit-clear-all-symbolic")
         clean_box.prepend(clean_icon)
-        clean_label = Gtk.Label(label="Limpiar sistema")
+        clean_label = Gtk.Label(label=_("Limpiar sistema"))
         clean_box.append(clean_label)
         self.clean_button.set_child(clean_box)
         self.clean_button.connect("clicked", self.on_clean_clicked)
@@ -2022,7 +2040,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         antivirus_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         antivirus_icon = Gtk.Image.new_from_icon_name("security-high-symbolic")
         antivirus_box.prepend(antivirus_icon)
-        antivirus_label = Gtk.Label(label="Análisis antivirus")
+        antivirus_label = Gtk.Label(label=_("Análisis antivirus"))
         antivirus_box.append(antivirus_label)
         self.antivirus_button.set_child(antivirus_box)
         self.antivirus_button.connect("clicked", self.on_antivirus_clicked)
@@ -2045,7 +2063,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         progress_icon = Gtk.Image.new_from_icon_name("emblem-synchronizing-symbolic")
         progress_title_box.prepend(progress_icon)
         
-        progress_title_label = Gtk.Label(label="Progreso")
+        progress_title_label = Gtk.Label(label=_("Progreso"))
         progress_title_label.add_css_class("title-label")
         progress_title_box.append(progress_title_label)
         
@@ -2057,7 +2075,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         progress_section.append(self.progress_bar)
         
         # Etiqueta de estado
-        self.status_label = Gtk.Label(label="Empieza seleccionando un archivo que contenga una app")
+        self.status_label = Gtk.Label(label=_("Empieza seleccionando un archivo que contenga una app"))
         self.status_label.add_css_class("status-label")
         progress_section.append(self.status_label)
         
@@ -2071,11 +2089,11 @@ class PackageInstaller(Adw.ApplicationWindow):
     
     def on_file_chooser_clicked(self, button):
         dialog = Gtk.FileChooserNative(
-            title="Seleccionar paquete",
+            title=_("Seleccionar paquete"),
             transient_for=self,
             action=Gtk.FileChooserAction.OPEN,
-            accept_label="Abrir",
-            cancel_label="Cancelar"
+            accept_label=_("Abrir"),
+            cancel_label=_("Cancelar")
         )
         
         # En GTK 4, los filtros se pueden configurar opcionalmente
@@ -2089,9 +2107,9 @@ class PackageInstaller(Adw.ApplicationWindow):
             file = dialog.get_file()
             if file:
                 self.file_path = file.get_path()
-                self.selected_file_label.set_text(f"Archivo seleccionado: {os.path.basename(self.file_path)}")
+                self.selected_file_label.set_text(_(f"Archivo seleccionado: {os.path.basename(self.file_path)}"))
                 self.install_button.set_sensitive(True)
-                self.status_label.set_text(f"Estoy listo para instalar: {os.path.basename(self.file_path)}")
+                self.status_label.set_text(_(f"Estoy listo para instalar: {os.path.basename(self.file_path)}"))
         dialog.destroy()
 
     def create_desktop_file(self, app_name):
@@ -2157,24 +2175,24 @@ Categories=Utility;
     
     def show_no_updates_message(self):
         dialog = Adw.AlertDialog(
-            heading="Estoy actualizado :)",
-            body=f"Bien hecho, estoy actualizado a la última versión ({CURRENT_VERSION})."
+            heading=_("Estoy actualizado :)"),
+            body=_(f"Bien hecho, estoy actualizado a la última versión ({CURRENT_VERSION}).")
         )
         dialog.add_response("ok", "OK")
         dialog.set_default_response("ok")
         dialog.present(self)
-        self.status_label.set_text("Empieza seleccionando un archivo que contenga una app")
+        self.status_label.set_text(_("Empieza seleccionando un archivo que contenga una app"))
         return False
     
     def show_update_check_error(self):
         dialog = Adw.AlertDialog(
-            heading="He encontrado un error",
-            body="Vaya, no he podido comprobar las actualizaciones. ¿Estás conectado a internet?"
+            heading=_("He encontrado un error"),
+            body=_("Vaya, no he podido comprobar las actualizaciones. ¿Estás conectado a internet?")
         )
         dialog.add_response("ok", "OK")
         dialog.set_default_response("ok")
         dialog.present(self)
-        self.status_label.set_text("Empieza seleccionando un archivo que contenga una app")
+        self.status_label.set_text(_("Empieza seleccionando un archivo que contenga una app"))
         return False
 
     def on_install_clicked(self, widget):
@@ -2186,7 +2204,7 @@ Categories=Utility;
         self.apps_button.set_sensitive(False)
         self.clean_button.set_sensitive(False)
         self.antivirus_button.set_sensitive(False)
-        self.status_label.set_text("Instalando...")
+        self.status_label.set_text(_("Instalando..."))
         self.progress_bar.set_fraction(0.0)
 
         file_extension = os.path.splitext(self.file_path)[1].lower()
@@ -2213,7 +2231,7 @@ Categories=Utility;
             extract_dir = os.path.expanduser('~/.local')
             cmd = ['tar', '-xvf', self.file_path, '-C', extract_dir]
         else:
-            self.status_label.set_text("Formato de paquete no soportado por Swift Install")
+            self.status_label.set_text(_("Formato de paquete no soportado por Swift Install"))
             self.install_button.set_sensitive(True)
             self.fix_deps_button.set_sensitive(True)
             self.apps_button.set_sensitive(True)
@@ -2229,7 +2247,7 @@ Categories=Utility;
         self.apps_button.set_sensitive(False)
         self.clean_button.set_sensitive(False)
         self.antivirus_button.set_sensitive(False)
-        self.status_label.set_text("Corrigiendo errores")
+        self.status_label.set_text(_("Corrigiendo errores"))
         self.progress_bar.set_fraction(0.0)
 
         cmd = ['pkexec', 'apt-get', 'install', '-f', '-y']
@@ -2253,14 +2271,13 @@ Categories=Utility;
         try:
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
             
-            while True:
-                output = process.stdout.readline()
-                if output == '' and process.poll() is not None:
-                    break
-                if output:
-                    GLib.idle_add(self.update_progress)
-
-            _, stderr = process.communicate()
+            # Usar communicate() directamente para evitar bloqueos por buffer
+            stdout, stderr = process.communicate()
+            
+            # Simular progreso ya que no podemos leer en tiempo real fiablemente sin riesgo de bloqueo
+            for i in range(10):
+                time.sleep(0.1)
+                GLib.idle_add(self.update_progress)
             
             if process.returncode == 0:
                 self.installed_package = self.file_path
@@ -2268,33 +2285,32 @@ Categories=Utility;
                 # Mensaje especial para AppImage
                 if self.file_path.lower().endswith('.appimage'):
                     app_name = os.path.basename(self.file_path).replace('.appimage', '')
-                    GLib.idle_add(self.installation_complete, f"AppImage instalado como {app_name}. Se ha creado un acceso directo.")
+                    GLib.idle_add(self.installation_complete, _(f"AppImage instalado como {app_name}. Se ha creado un acceso directo."))
                 else:
-                    GLib.idle_add(self.installation_complete, "He instalado todo bien, ¡disfrútala!")
+                    GLib.idle_add(self.installation_complete, _("He instalado todo bien, ¡disfrútala!"))
             else:
-                GLib.idle_add(self.installation_complete, f"Vaya, he encontrado un error al instalar: {stderr}", True, stderr)
+                GLib.idle_add(self.installation_complete, _(f"Vaya, he encontrado un error al instalar: {stderr}"), True, stderr)
         except Exception as e:
-            GLib.idle_add(self.installation_complete, f"Error en la instalación: {str(e)}", True, "")
+            GLib.idle_add(self.installation_complete, _(f"Error en la instalación: {str(e)}"), True, "")
 
     def run_fix_deps(self, cmd):
         try:
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
             
-            while True:
-                output = process.stdout.readline()
-                if output == '' and process.poll() is not None:
-                    break
-                if output:
-                    GLib.idle_add(self.update_progress)
-
-            _, stderr = process.communicate()
+            # Usar communicate() directamente para evitar bloqueos por buffer
+            stdout, stderr = process.communicate()
+            
+            # Simular progreso
+            for i in range(10):
+                time.sleep(0.1)
+                GLib.idle_add(self.update_progress)
             
             if process.returncode == 0:
-                GLib.idle_add(self.fix_deps_complete, "He arreglado las dependencias")
+                GLib.idle_add(self.fix_deps_complete, _("He arreglado las dependencias"))
             else:
-                GLib.idle_add(self.fix_deps_complete, f"Vaya, un error al corregir dependencias: {stderr}", True)
+                GLib.idle_add(self.fix_deps_complete, _(f"Vaya, un error al corregir dependencias: {stderr}"), True)
         except Exception as e:
-            GLib.idle_add(self.fix_deps_complete, f"Error al corregir dependencias: {str(e)}", True)
+            GLib.idle_add(self.fix_deps_complete, _(f"Error al corregir dependencias: {str(e)}"), True)
 
     def update_progress(self):
         new_value = min(1.0, self.progress_bar.get_fraction() + 0.01)
@@ -2314,12 +2330,12 @@ Categories=Utility;
                 return
                 
             dialog = Adw.AlertDialog(
-                heading="¡Un error en la instalación!",
+                heading=_(f"¡Un error en la instalación!"),
                 body=message
             )
         else:
             dialog = Adw.AlertDialog(
-                heading="He terminado la instalación",
+                heading=_("He terminado la instalación"),
                 body=message
             )
         
@@ -2338,12 +2354,12 @@ Categories=Utility;
         
         if is_error:
             dialog = Adw.AlertDialog(
-                heading="¡Un error al corregir las dependencias!",
+                heading=_("¡Un error al corregir las dependencias!"),
                 body=message
             )
         else:
             dialog = Adw.AlertDialog(
-                heading="He corregido las dependencias",
+                heading=_("He corregido las dependencias"),
                 body=message
             )
         

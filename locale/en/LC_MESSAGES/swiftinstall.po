@@ -1,0 +1,453 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-17 10:35+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: start.py:207
+msgid "Actualización disponible"
+msgstr "Update available"
+
+#: start.py:209
+msgid "Recordar más tarde"
+msgstr "Remind me later"
+
+#: start.py:210
+msgid "Actualizar ahora"
+msgstr "Update now"
+
+#: start.py:220 start.py:232 start.py:2024
+msgid "Limpiar sistema"
+msgstr "Clean system"
+
+#: start.py:266
+msgid "Limpieza del sistema"
+msgstr "System cleanup"
+
+#: start.py:271
+msgid "Dime qué quieres que limpie y te dejo el sistema reluciente"
+msgstr "Tell me what you want me to clean and I'll leave your system shining"
+
+#: start.py:279
+msgid "Directorios a limpiar"
+msgstr "Directories to clean"
+
+#: start.py:288
+msgid "Caché de aplicaciones del usuario"
+msgstr "User application cache"
+
+#: start.py:289
+msgid "Papelera del usuario"
+msgstr "User trash"
+
+#: start.py:290
+msgid "Archivos temporales del sistema"
+msgstr "System temporary files"
+
+#: start.py:291
+msgid "Miniaturas de imágenes"
+msgstr "Image thumbnails"
+
+#: start.py:292
+msgid "Archivos temporales variables"
+msgstr "Variable temporary files"
+
+#: start.py:293
+msgid "Logs de aplicaciones"
+msgstr "Application logs"
+
+#: start.py:294
+msgid "Logs del sistema (requiere privilegios)"
+msgstr "System logs (requires privileges)"
+
+#: start.py:295
+msgid "Lista de archivos recientes"
+msgstr "Recently used files list"
+
+#: start.py:326 start.py:892
+msgid "Opciones avanzadas"
+msgstr "Advanced options"
+
+#: start.py:337
+msgid "Eliminar paquetes huérfanos"
+msgstr "Remove orphan packages"
+
+#: start.py:341
+msgid "Paquetes que ya no son necesarios"
+msgstr "Packages that are no longer needed"
+
+#: start.py:355
+msgid "Limpiar caché de APT"
+msgstr "Clean APT cache"
+
+#: start.py:359
+msgid "Archivos .deb descargados"
+msgstr "Downloaded .deb files"
+
+#: start.py:377
+msgid "Analizar"
+msgstr "Analyze"
+
+#: start.py:389
+msgid "Limpiar ahora"
+msgstr "Clean now"
+
+#: start.py:406
+msgid "Selecciona las opciones y presiona 'Analizar'"
+msgstr "Select options and press 'Analyze'"
+
+#: start.py:420
+msgid "Analizando archivos..."
+msgstr "Analyzing files..."
+
+#: start.py:552
+msgid "Autorízame y yo limpio el sistema"
+msgstr "Authorize me and I'll clean the system"
+
+#: start.py:555 start.py:1060 start.py:1079 start.py:2095
+msgid "Cancelar"
+msgstr "Cancel"
+
+#: start.py:556
+msgid "Limpiar"
+msgstr "Clean"
+
+#: start.py:578
+msgid "Limpiando archivos..."
+msgstr "Cleaning files..."
+
+#: start.py:696
+msgid "¡Ya he terminado!"
+msgstr "I'm done!"
+
+#: start.py:713
+msgid "Error en la limpieza"
+msgstr "Cleaning error"
+
+#: start.py:725 start.py:2042
+msgid "Análisis antivirus"
+msgstr "Antivirus scan"
+
+#: start.py:737
+msgid "Análisis de virus"
+msgstr "Virus scan"
+
+#: start.py:771
+msgid "Puedo analizar tu sistema en busca de virus."
+msgstr "I can scan your system for viruses."
+
+#: start.py:776
+msgid "Protege tu sistema con análisis antivirus"
+msgstr "Protect your system with antivirus scanning"
+
+#: start.py:784
+msgid "Estado del antivirus"
+msgstr "Antivirus status"
+
+#: start.py:788
+msgid "Verificando ClamAV..."
+msgstr "Checking ClamAV..."
+
+#: start.py:797 start.py:1076
+msgid "Instalar ClamAV"
+msgstr "Install ClamAV"
+
+#: start.py:811
+msgid "Configuración del análisis"
+msgstr "Scan configuration"
+
+#: start.py:818
+msgid "Tipo de análisis:"
+msgstr "Scan type:"
+
+#: start.py:828
+msgid "Análisis rápido"
+msgstr "Quick scan"
+
+#: start.py:831
+msgid "Carpetas importantes del usuario (~, /tmp, /var/tmp)"
+msgstr "Important user folders (~, /tmp, /var/tmp)"
+
+#: start.py:842
+msgid "Análisis completo"
+msgstr "Full scan"
+
+#: start.py:845
+msgid "Todo el sistema (puedo estar bastante rato trabajando)"
+msgstr "Entire system (I might be working for a while)"
+
+#: start.py:856
+msgid "Análisis personalizado"
+msgstr "Custom scan"
+
+#: start.py:859
+msgid "Selecciona los directorios que quieres que analice"
+msgstr "Select the directories you want me to scan"
+
+#: start.py:870
+msgid "Ruta del directorio a analizar..."
+msgstr "Path of directory to scan..."
+
+#: start.py:903
+msgid "Actualizar definiciones antes del análisis"
+msgstr "Update definitions before scanning"
+
+#: start.py:907
+msgid ""
+"Descargar las últimas actualizaciones de definiciones de virus para "
+"detectarles mejor"
+msgstr "Download the latest virus definition updates to detect them better"
+
+#: start.py:920
+msgid "Análisis profundo"
+msgstr "Deep scan"
+
+#: start.py:924
+msgid "Incluir archivos comprimidos y análisis heurístico"
+msgstr "Include compressed files and heuristic analysis"
+
+#: start.py:942
+msgid "Actualizar"
+msgstr "Update"
+
+#: start.py:954
+msgid "Iniciar análisis"
+msgstr "Start scan"
+
+#: start.py:970
+msgid "Listo para iniciar análisis"
+msgstr "Ready to start analysis"
+
+#: start.py:978
+msgid "Resultados del análisis"
+msgstr "Analysis results"
+
+#: start.py:1056
+msgid "Seleccionar directorio para análisis"
+msgstr "Select directory for analysis"
+
+#: start.py:1059
+msgid "Seleccionar"
+msgstr "Select"
+
+#: start.py:1077
+msgid ""
+"¿Quieres instalar ClamAV y sus definiciones de virus?\n"
+"\n"
+"Esto puede tardar varios minutos y requiere conexión a internet."
+msgstr ""
+"Do you want to install ClamAV and its virus definitions?\n"
+"\n"
+"This may take several minutes and requires an internet connection."
+
+#: start.py:1080 start.py:1981
+msgid "Instalar"
+msgstr "Install"
+
+#: start.py:1101
+msgid "Instalando ClamAV..."
+msgstr "Installing ClamAV..."
+
+#: start.py:1193
+msgid "ClamAV instalado correctamente"
+msgstr "ClamAV installed successfully"
+
+#: start.py:1207
+msgid "Actualizando definiciones de virus..."
+msgstr "Updating virus definitions..."
+
+#: start.py:1250
+msgid "Definiciones actualizadas correctamente"
+msgstr "Definitions updated successfully"
+
+#: start.py:1279
+msgid "Iniciando análisis antivirus..."
+msgstr "Starting antivirus scan..."
+
+#: start.py:1390
+msgid "⚠️ ¡Cuidado!"
+msgstr "⚠️ Warning!"
+
+#: start.py:1393
+msgid "Ignorar"
+msgstr "Ignore"
+
+#: start.py:1394
+msgid "Poner en cuarentena"
+msgstr "Quarantine"
+
+#: start.py:1395
+msgid "Eliminar amenazas"
+msgstr "Remove threats"
+
+#: start.py:1442
+msgid "Aplicaciones instaladas"
+msgstr "Installed applications"
+
+#: start.py:1477
+msgid "Buscar aplicaciones..."
+msgstr "Search applications..."
+
+#: start.py:1640
+msgid "AppImage"
+msgstr "AppImage"
+
+#: start.py:1640
+msgid "Paquete instalado"
+msgstr "Installed package"
+
+#: start.py:1648
+msgid "Desinstalar"
+msgstr "Uninstall"
+
+#: start.py:1669
+msgid "No he encontrado aplicaciones instaladas en tu sistema"
+msgstr "I haven't found any installed applications on your system"
+
+#: start.py:1698
+msgid "No he podido encontrar aplicaciones instaladas en tu sistema"
+msgstr "I couldn't find installed applications on your system"
+
+#: start.py:1737
+msgid "Confirmación"
+msgstr "Confirmation"
+
+#: start.py:1740
+msgid "No"
+msgstr "No"
+
+#: start.py:1741
+msgid "Sí"
+msgstr "Yes"
+
+#: start.py:1819 start.py:1824
+msgid "Desinstalación completada"
+msgstr "Uninstallation completed"
+
+#: start.py:1832
+msgid "Error en la desinstalación"
+msgstr "Uninstallation error"
+
+#: start.py:1837
+msgid "Uy... ha habido un error cuando estaba desinstalándote la app"
+msgstr "Oops... there was an error while uninstalling the app"
+
+#: start.py:1861
+msgid "Menú"
+msgstr "Menu"
+
+#: start.py:1874
+msgid "Acerca de Swift Install"
+msgstr "About Swift Install"
+
+#: start.py:1878
+msgid "Reportar un error"
+msgstr "Report an issue"
+
+#: start.py:1882
+msgid "Buscar actualizaciones"
+msgstr "Check for updates"
+
+#: start.py:1926
+msgid "¿Qué debo instalar?"
+msgstr "What should I install?"
+
+#: start.py:1939
+msgid "Selecciona el archivo que debo instalar"
+msgstr "Select the file I should install"
+
+#: start.py:1950
+msgid "Aún no has seleccionado ningún archivo"
+msgstr "You haven't selected any file yet"
+
+#: start.py:1965
+msgid "Acciones"
+msgstr "Actions"
+
+#: start.py:1994
+msgid "Corregir errores"
+msgstr "Fix errors"
+
+#: start.py:2012
+msgid "Eliminar apps"
+msgstr "Remove apps"
+
+#: start.py:2065
+msgid "Progreso"
+msgstr "Progress"
+
+#: start.py:2077 start.py:2183 start.py:2194
+msgid "Empieza seleccionando un archivo que contenga una app"
+msgstr "Start by selecting a file that contains an app"
+
+#: start.py:2091
+msgid "Seleccionar paquete"
+msgstr "Select package"
+
+#: start.py:2094
+msgid "Abrir"
+msgstr "Open"
+
+#: start.py:2177
+msgid "Estoy actualizado :)"
+msgstr "I'm up to date :)"
+
+#: start.py:2188
+msgid "He encontrado un error"
+msgstr "I found an error"
+
+#: start.py:2189
+msgid ""
+"Vaya, no he podido comprobar las actualizaciones. ¿Estás conectado a "
+"internet?"
+msgstr ""
+"Oops, I couldn't check for updates. Are you connected to the internet?"
+
+#: start.py:2206
+msgid "Instalando..."
+msgstr "Installing..."
+
+#: start.py:2233
+msgid "Formato de paquete no soportado por Swift Install"
+msgstr "Package format not supported by Swift Install"
+
+#: start.py:2249
+msgid "Corrigiendo errores"
+msgstr "Fixing errors"
+
+#: start.py:2290
+msgid "He instalado todo bien, ¡disfrútala!"
+msgstr "I installed everything correctly, enjoy it!"
+
+#: start.py:2310
+msgid "He arreglado las dependencias"
+msgstr "I fixed the dependencies"
+
+#: start.py:2334
+msgid "¡Un error en la instalación!"
+msgstr "An installation error!"
+
+#: start.py:2339
+msgid "He terminado la instalación"
+msgstr "I finished the installation"
+
+#: start.py:2358
+msgid "¡Un error al corregir las dependencias!"
+msgstr "An error fixing dependencies!"
+
+#: start.py:2363
+msgid "He corregido las dependencias"
+msgstr "I fixed the dependencies"
