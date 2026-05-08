@@ -8,3 +8,4 @@ Type=Application
 Categories=Utility;System;
 StartupNotify=false
 Keywords=install;package;deb;rpm;appimage;
+MimeType=application/vnd.debian.binary-package;application/x-debian-package;application/x-appimage;

@@ -1,0 +1,75 @@
+name: Build and Release .deb
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: contains(github.event.head_commit.message, '[RELEASE]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install gettext
+        run: sudo apt-get update && sudo apt-get install -y gettext
+
+      - name: Compile translations
+        run: |
+          # Compilar traducciones de la carpeta locale al paquete
+          mkdir -p swiftinstall/usr/share/locale/en/LC_MESSAGES/
+          msgfmt locale/en/LC_MESSAGES/swiftinstall.po -o swiftinstall/usr/share/locale/en/LC_MESSAGES/swiftinstall.mo
+          
+          # También compilar en la carpeta locale raíz por si acaso
+          msgfmt locale/en/LC_MESSAGES/swiftinstall.po -o locale/en/LC_MESSAGES/swiftinstall.mo
+
+      - name: Sync source files
+        run: |
+          mkdir -p swiftinstall/usr/share/swiftinstall/
+          cp start.py swiftinstall/usr/share/swiftinstall/
+          cp styles.css swiftinstall/usr/share/swiftinstall/
+          cp appimage.png swiftinstall/usr/share/swiftinstall/
+
+      - name: Set up permissions
+        run: |
+          chmod -R 755 swiftinstall/usr
+          chmod 755 swiftinstall/DEBIAN/postinst
+          chmod 644 swiftinstall/DEBIAN/control
+
+      - name: Build .deb package
+        run: |
+          PACKAGE_NAME=$(grep '^Package:' swiftinstall/DEBIAN/control | cut -d' ' -f2)
+          VERSION=$(grep '^Version:' swiftinstall/DEBIAN/control | cut -d' ' -f2)
+          ARCH=$(grep '^Architecture:' swiftinstall/DEBIAN/control | cut -d' ' -f2)
+          DEB_NAME="${PACKAGE_NAME}_${VERSION}_${ARCH}.deb"
+          dpkg-deb --root-owner-group --build swiftinstall "$DEB_NAME"
+          echo "DEB_NAME=$DEB_NAME" >> $GITHUB_ENV
+          echo "TAG_NAME=v$VERSION" >> $GITHUB_ENV
+
+      - name: Install alien
+        run: sudo apt-get update && sudo apt-get install -y alien
+
+      - name: Build .rpm package
+        run: |
+          sudo alien --to-rpm --scripts --keep-version "${{ env.DEB_NAME }}"
+          # Alien converts underscores to hyphens and might change name slightly
+          RPM_NAME=$(ls *.rpm | head -n 1)
+          echo "RPM_NAME=$RPM_NAME" >> $GITHUB_ENV
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ env.DEB_NAME }}
+            ${{ env.RPM_NAME }}
+          tag_name: ${{ env.TAG_NAME }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

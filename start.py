@@ -9,10 +9,11 @@ import webbrowser
 import requests
 import time
 import sys
+import shutil
 from packaging import version
 
 # Versión actual de la aplicación
-CURRENT_VERSION = "9.0"  # Esto se cambia según haya una nueva release
+CURRENT_VERSION = "10.0"  # Esto se cambia según haya una nueva release
 GITHUB_REPO = "InledGroup/swiftinstall"
 
 import locale
@@ -1472,44 +1473,81 @@ class InstalledAppsWindow(Adw.Window):
             main_box.set_margin_end(16)
             toolbar_view.set_content(main_box)
 
-        # Barra de búsqueda con icono
-        search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        search_icon = Gtk.Image.new_from_icon_name("system-search-symbolic")
-        search_box.prepend(search_icon)
-        
+        # Barra de búsqueda integrada y a ancho completo
         self.search_entry = Gtk.SearchEntry()
         self.search_entry.set_placeholder_text(_("Buscar aplicaciones..."))
         self.search_entry.connect("search-changed", self.on_search_changed)
         self.search_entry.add_css_class("search-entry")
-        search_box.append(self.search_entry)
+        self.search_entry.set_hexpand(True)
+        main_box.append(self.search_entry)
+
+        # Contenedor para el contenido (Stack para manejar estados)
+        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        # Quitamos la clase "card" para evitar el recuadro anidado
+        main_box.append(content_box)
+
+        # Separador sutil
+        separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        separator.set_margin_top(8)
+        separator.set_margin_bottom(8)
+        content_box.append(separator)
+
+        self.stack = Gtk.Stack()
+        self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+        content_box.append(self.stack)
+
+        # 1. Estado de Carga (Spinner)
+        loading_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        loading_box.set_valign(Gtk.Align.CENTER)
+        loading_box.set_halign(Gtk.Align.CENTER)
+        loading_box.set_margin_top(40)
+        loading_box.set_margin_bottom(40)
         
-        main_box.append(search_box)
+        spinner = Gtk.Spinner()
+        spinner.set_size_request(32, 32)
+        spinner.start()
+        loading_box.append(spinner)
+        
+        loading_label = Gtk.Label(label=_("Cargando aplicaciones..."))
+        loading_label.add_css_class("subtitle-label")
+        loading_box.append(loading_label)
+        
+        self.stack.add_named(loading_box, "loading")
 
-        # Tarjeta para la lista de aplicaciones
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        card.add_css_class("card")
-        main_box.append(card)
-
+        # 2. Estado de Lista (ScrolledWindow + ListBox)
         scrolled_window = Gtk.ScrolledWindow()
         scrolled_window.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled_window.set_min_content_height(300)
-        card.append(scrolled_window)
-
+        
         self.listbox = Gtk.ListBox()
         self.listbox.set_selection_mode(Gtk.SelectionMode.NONE)
         self.listbox.set_filter_func(self.filter_func)
         scrolled_window.set_child(self.listbox)
         
-        # Barra de progreso
-        progress_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        progress_box.set_margin_top(16)
+        self.stack.add_named(scrolled_window, "list")
+
+        # 3. Estado "No encontrado"
+        no_results_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        no_results_box.set_valign(Gtk.Align.CENTER)
+        no_results_box.set_halign(Gtk.Align.CENTER)
+        no_results_box.set_margin_top(40)
+        no_results_box.set_margin_bottom(40)
         
+        no_results_icon = Gtk.Image.new_from_icon_name("system-search-symbolic")
+        no_results_icon.set_pixel_size(48)
+        no_results_box.append(no_results_icon)
+        
+        self.no_results_label = Gtk.Label(label=_("No he encontrado nada que coincida"))
+        self.no_results_label.add_css_class("title-label")
+        no_results_box.append(self.no_results_label)
+        
+        self.stack.add_named(no_results_box, "empty")
+        
+        # Barra de progreso para desinstalación
         self.progress_bar = Gtk.ProgressBar()
         self.progress_bar.add_css_class("progress-bar")
-        progress_box.append(self.progress_bar)
-        
-        main_box.append(progress_box)
         self.progress_bar.set_visible(False)
+        main_box.append(self.progress_bar)
 
         # Mensaje de estado
         self.status_label = Gtk.Label(label="")
@@ -1527,16 +1565,8 @@ class InstalledAppsWindow(Adw.Window):
             self.listbox.remove(child)
             child = next_child
             
-        # Mostrar un spinner mientras se cargan las aplicaciones
-        spinner = Gtk.Spinner()
-        spinner.start()
-        spinner_row = Gtk.ListBoxRow()
-        spinner_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        spinner_box.set_margin_top(12)
-        spinner_box.set_margin_bottom(12)
-        spinner_box.append(spinner)
-        spinner_row.set_child(spinner_box)
-        self.listbox.append(spinner_row)
+        # Mostrar estado de carga
+        self.stack.set_visible_child_name("loading")
         
         # Iniciar un hilo para cargar las aplicaciones
         thread = threading.Thread(target=self.load_apps_thread)
@@ -1548,16 +1578,33 @@ class InstalledAppsWindow(Adw.Window):
             # Obtener paquetes instalados
             packages = []
             appimages = []
+            brew_packages = []
             
-            # Obtener paquetes del sistema
+            # Obtener paquetes del sistema (APT)
             try:
                 output = subprocess.check_output(['dpkg', '--get-selections'], 
                                                timeout=10).decode('utf-8')
-                packages = [line.split()[0] for line in output.split('\n') if line.strip()]
+                packages = [line.split()[0] for line in output.split('\n') 
+                           if line.strip() and len(line.split()) > 1 and line.split()[1] == 'install']
             except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
                 print(f"Error al obtener paquetes: {e}")
             
-            # Obtener AppImages
+            # Obtener paquetes de Homebrew
+            if shutil.which('brew'):
+                try:
+                    # Listar fórmulas y casks
+                    output = subprocess.check_output(['brew', 'list', '--formula'], 
+                                                   timeout=15).decode('utf-8')
+                    brew_packages.extend([line.strip() for line in output.split('\n') if line.strip()])
+                    
+                    output_cask = subprocess.check_output(['brew', 'list', '--cask'], 
+                                                        timeout=15).decode('utf-8')
+                    brew_packages.extend([line.strip() for line in output_cask.split('\n') if line.strip()])
+                except Exception as e:
+                    print(f"Error al obtener paquetes de Homebrew: {e}")
+
+            # Obtener AppImages y PWAs
+            pwas = []
             desktop_dir = "/usr/share/applications"
             if os.path.exists(desktop_dir):
                 for filename in os.listdir(desktop_dir):
@@ -1566,54 +1613,67 @@ class InstalledAppsWindow(Adw.Window):
                         try:
                             with open(desktop_path, 'r') as f:
                                 content = f.read()
-                                if "/usr/bin/" in content and "appimage.png" in content:
-                                    app_name = filename.replace(".desktop", "")
-                                    appimages.append(app_name)
+                                app_name = filename.replace(".desktop", "")
+
+                                # Detectar si es de SwiftInstall:
+                                # 1. Tiene la marca nueva (AppImage o PWA)
+                                # 2. Tiene el icono por defecto antiguo
+                                # 3. Tiene el patrón de ruta de binario e icono personalizado de SwiftInstall
+                                if "X-SwiftInstall=PWA" in content:
+                                    pwas.append(app_name)
+                                else:
+                                    is_swift_app = (
+                                        "X-SwiftInstall=AppImage" in content or 
+                                        ("/usr/bin/" in content and "appimage.png" in content) or
+                                        (f"Exec=/usr/bin/{app_name}" in content and f"Icon=/usr/share/pixmaps/{app_name}" in content)
+                                    )
+
+                                    if is_swift_app:
+                                        appimages.append(app_name)
                         except:
                             pass
             
             # Actualizar la UI en lotes para evitar sobrecargar el bucle principal
-            def update_ui_with_packages():
-                # Eliminar el spinner
-                child = self.listbox.get_first_child()
-                while child:
-                    next_child = child.get_next_sibling()
-                    child_widget = child.get_child()
-                    if isinstance(child_widget, Gtk.Box):
-                        first_grandchild = child_widget.get_first_child()
-                        if isinstance(first_grandchild, Gtk.Spinner):
-                            self.listbox.remove(child)
-                            break
-                    child = next_child
+            def update_ui_batch(index):
+                # Combinar todas las aplicaciones para el listado (APT primero, luego Brew, luego AppImage, luego PWA)
+                all_apps = []
+                for p in packages: all_apps.append((p, "apt"))
+                for b in brew_packages: all_apps.append((b, "brew"))
+                for a in appimages: all_apps.append((a, "appimage"))
+                for pw in pwas: all_apps.append((pw, "pwa"))
+
+                if not all_apps:
+                    self.stack.set_visible_child_name("empty")
+                    return False
+
+                batch_size = 30
+                end_index = min(index + batch_size, len(all_apps))
                 
-                # Añadir paquetes en lotes
-                batch_size = 50
-                for i in range(0, len(packages), batch_size):
-                    batch = packages[i:i+batch_size]
-                    for package_name in batch:
-                        self.add_app_to_list(package_name, False)
-                    
-                    # Permitir que la UI se actualice entre lotes
-                    # En GTK 4, esto se maneja automáticamente
+                for i in range(index, end_index):
+                    name, type = all_apps[i]
+                    self.add_app_to_list(name, type == "appimage", type == "brew", type == "pwa")
                 
-                # Añadir AppImages
-                for app_name in appimages:
-                    self.add_app_to_list(app_name, True)
+                if end_index < len(all_apps):
+                    # Programar el siguiente lote
+                    GLib.idle_add(lambda: update_ui_batch(end_index))
+                else:
+                    # Mostrar la lista cuando todo esté cargado
+                    self.stack.set_visible_child_name("list")
+                    # Forzar el filtrado inicial por si había texto en la búsqueda
+                    self.on_search_changed(self.search_entry)
                 
-                # Mostrar mensaje si no se encontraron aplicaciones
-                if not packages and not appimages:
-                    self.show_no_apps_message()
+                return False
                 
                 return False
             
             # Programar la actualización de la UI en el hilo principal
-            GLib.idle_add(update_ui_with_packages)
+            GLib.idle_add(lambda: update_ui_batch(0))
             
         except Exception as e:
             print(f"Error al cargar aplicaciones: {e}")
             GLib.idle_add(self.show_error_message)
     
-    def add_app_to_list(self, package_name, is_appimage=False):
+    def add_app_to_list(self, package_name, is_appimage=False, is_brew=False, is_pwa=False):
         """Añadir una aplicación a la lista"""
         row = Gtk.ListBoxRow()
         row.add_css_class("list-row")
@@ -1626,8 +1686,32 @@ class InstalledAppsWindow(Adw.Window):
         row.set_child(hbox)
         
         # Icono para el tipo de aplicación
-        icon_name = "package-x-generic" if not is_appimage else "application-x-executable"
-        icon = Gtk.Image.new_from_icon_name(icon_name)
+        if is_appimage:
+            icon = Gtk.Image.new_from_icon_name("application-x-executable")
+        elif is_pwa:
+            icon = Gtk.Image.new_from_icon_name("web-browser-symbolic")
+        elif is_brew:
+            # Intentar cargar el logo de Homebrew
+            brew_logo_path = os.path.expanduser("~/.cache/swiftinstall/homebrew_logo.png")
+            if not os.path.exists(brew_logo_path):
+                # Descargar el logo si no existe
+                try:
+                    os.makedirs(os.path.dirname(brew_logo_path), exist_ok=True)
+                    response = requests.get("https://upload.wikimedia.org/wikipedia/commons/3/34/Homebrew_logo.png", timeout=10)
+                    if response.status_code == 200:
+                        with open(brew_logo_path, 'wb') as f:
+                            f.write(response.content)
+                except:
+                    pass
+            
+            if os.path.exists(brew_logo_path):
+                icon = Gtk.Image.new_from_file(brew_logo_path)
+                icon.set_pixel_size(24)
+            else:
+                icon = Gtk.Image.new_from_icon_name("system-software-install")
+        else:
+            icon = Gtk.Image.new_from_icon_name("package-x-generic")
+            
         hbox.prepend(icon)
         
         # Nombre a mostrar
@@ -1635,13 +1719,23 @@ class InstalledAppsWindow(Adw.Window):
         
         # Contenedor vertical para nombre y tipo
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        vbox.set_hexpand(True) # Expandir para empujar el botón al final
         
         label = Gtk.Label(label=display_name, xalign=0)
         label.add_css_class("title-label")
         vbox.append(label)
         
         # Etiqueta para el tipo
-        type_label = Gtk.Label(label=_("AppImage") if is_appimage else _("Paquete instalado"), xalign=0)
+        if is_appimage:
+            type_text = _("AppImage")
+        elif is_pwa:
+            type_text = _("PWA (Web App)")
+        elif is_brew:
+            type_text = _("Paquete Homebrew")
+        else:
+            type_text = _("Paquete instalado")
+            
+        type_label = Gtk.Label(label=type_text, xalign=0)
         type_label.add_css_class("subtitle-label")
         vbox.append(type_label)
         
@@ -1651,11 +1745,12 @@ class InstalledAppsWindow(Adw.Window):
         button = Gtk.Button()
         button.set_tooltip_text(_("Desinstalar"))
         button.add_css_class("destructive-button")
+        button.set_valign(Gtk.Align.CENTER) # Centrar verticalmente respecto al texto
         
         button_icon = Gtk.Image.new_from_icon_name("user-trash-symbolic")
         button.set_child(button_icon)
         
-        button.connect("clicked", self.on_uninstall_clicked, package_name, is_appimage)
+        button.connect("clicked", self.on_uninstall_clicked, package_name, is_appimage, is_brew, is_pwa)
         hbox.append(button)
         
         self.listbox.append(row)
@@ -1709,6 +1804,23 @@ class InstalledAppsWindow(Adw.Window):
     
     def on_search_changed(self, entry):
         self.listbox.invalidate_filter()
+        # Verificar si hay resultados visibles después de invalidar el filtro
+        GLib.idle_add(self.check_filter_results)
+
+    def check_filter_results(self):
+        has_visible = False
+        child = self.listbox.get_first_child()
+        while child:
+            if child.is_visible() and child.get_child():
+                has_visible = True
+                break
+            child = child.get_next_sibling()
+        
+        if not has_visible:
+            self.stack.set_visible_child_name("empty")
+        else:
+            self.stack.set_visible_child_name("list")
+        return False
     
     def filter_func(self, row):
         text = self.search_entry.get_text().lower()
@@ -1731,9 +1843,13 @@ class InstalledAppsWindow(Adw.Window):
         return False
     
     # Aviso desinstalación
-    def on_uninstall_clicked(self, button, package_name, is_appimage=False):
+    def on_uninstall_clicked(self, button, package_name, is_appimage=False, is_brew=False, is_pwa=False):
         if is_appimage:
-            message = _("¿Deseas desinstalar {}?").format(package_name)
+            message = _("¿Deseas desinstalar {}? (AppImage)").format(package_name)
+        elif is_pwa:
+            message = _("¿Deseas desinstalar {}? (Web App)").format(package_name)
+        elif is_brew:
+            message = _("¿Deseas desinstalar {}? (Homebrew)").format(package_name)
         else:
             message = _("¿Deseas desinstalar {}?").format(package_name)
             
@@ -1747,42 +1863,54 @@ class InstalledAppsWindow(Adw.Window):
         dialog.set_default_response("no")
         dialog.set_close_response("no")
         
-        
-        # Los botones ya se han estilizado en la configuración del AlertDialog
-        
-        dialog.choose(self, None, self._on_uninstall_dialog_response, (package_name, is_appimage))
+        dialog.choose(self, None, self._on_uninstall_dialog_response, (package_name, is_appimage, is_brew, is_pwa))
     
     def _on_uninstall_dialog_response(self, dialog, result, data):
-        package_name, is_appimage = data
+        package_name, is_appimage, is_brew, is_pwa = data
         try:
             response = dialog.choose_finish(result)
             if response == "yes":
-                self.uninstall_package(package_name, is_appimage)
+                self.uninstall_package(package_name, is_appimage, is_brew, is_pwa)
         except Exception as e:
             print(f"Dialog error: {e}")
     
     # Desinstalar paquete
-    def uninstall_package(self, package_name, is_appimage=False):
+    def uninstall_package(self, package_name, is_appimage=False, is_brew=False, is_pwa=False):
         self.progress_bar.set_fraction(0.0)
         self.progress_bar.set_visible(True)
         self.status_label.set_text(_("Desinstalando {}...").format(package_name))
-        
+
         if is_appimage:
-            # Eliminar el AppImage y su archivo .desktop
+            # Eliminar el AppImage, su archivo .desktop y sus posibles iconos
             cmd = [
                 'pkexec', 'bash', '-c',
                 f'rm -f /usr/bin/{package_name} && ' +
-                f'rm -f /usr/share/applications/{package_name}.desktop'
+                f'rm -f /usr/share/applications/{package_name}.desktop && ' +
+                f'rm -f /usr/share/pixmaps/{package_name}.*'
             ]
+        elif is_pwa:
+            # Eliminar la PWA (solo .desktop e iconos)
+            cmd = [
+                'pkexec', 'bash', '-c',
+                f'rm -f /usr/share/applications/{package_name}.desktop && ' +
+                f'rm -f /usr/share/pixmaps/{package_name}.*'
+            ]
+        elif is_brew:
+            # Desinstalar con brew
+            cmd = ['brew', 'uninstall', package_name]
+        elif shutil.which('dnf'):
+            # Desinstalar con dnf si está disponible
+            cmd = ['pkexec', 'dnf', 'remove', '-y', package_name]
         else:
-            # Eliminar un paquete normal
+            # Eliminar un paquete normal (APT)
             cmd = ['pkexec', 'apt-get', 'remove', '-y', package_name]
-            
-        thread = threading.Thread(target=self.run_uninstall, args=(cmd, package_name, is_appimage))
+
+        thread = threading.Thread(target=self.run_uninstall, args=(cmd, package_name, is_appimage, is_brew, is_pwa))
+
         thread.daemon = True
         thread.start()
     
-    def run_uninstall(self, cmd, package_name, is_appimage=False):
+    def run_uninstall(self, cmd, package_name, is_appimage=False, is_brew=False, is_pwa=False):
         try:
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
             
@@ -1796,11 +1924,11 @@ class InstalledAppsWindow(Adw.Window):
             _, stderr = process.communicate()
             
             if process.returncode == 0:
-                GLib.idle_add(self.uninstall_complete, package_name, True, is_appimage)
+                GLib.idle_add(self.uninstall_complete, package_name, True, is_appimage, is_brew, is_pwa)
             else:
-                GLib.idle_add(self.uninstall_complete, package_name, False, is_appimage, str(stderr))
-        except subprocess.CalledProcessError as e:
-            GLib.idle_add(self.uninstall_complete, package_name, False, is_appimage, str(e))
+                GLib.idle_add(self.uninstall_complete, package_name, False, is_appimage, is_brew, is_pwa, str(stderr))
+        except Exception as e:
+            GLib.idle_add(self.uninstall_complete, package_name, False, is_appimage, is_brew, is_pwa, str(e))
     
     # Barra de progreso de la desinstalación
     def update_uninstall_progress(self):
@@ -1809,13 +1937,17 @@ class InstalledAppsWindow(Adw.Window):
         return False
 
     # Mensaje después de ejecutar la desinstalación
-    def uninstall_complete(self, package_name, success, is_appimage=False, error_message=None):
+    def uninstall_complete(self, package_name, success, is_appimage=False, is_brew=False, is_pwa=False, error_message=None):
         self.progress_bar.set_visible(False)
         self.progress_bar.set_fraction(0.0)
         
         if success:
             if is_appimage:
                 message = _("{} ha sido desinstalado correctamente. Recuerda borrar los archivos que haya creado la aplicación.").format(package_name)
+            elif is_pwa:
+                message = _("La Web App {} ha sido eliminada correctamente.").format(package_name)
+            elif is_brew:
+                message = _("{} ha sido desinstalado de Homebrew correctamente.").format(package_name)
             else:
                 message = _("{} ha sido desinstalado correctamente.").format(package_name)
                 
@@ -1828,7 +1960,11 @@ class InstalledAppsWindow(Adw.Window):
             self.status_label.set_text(_("Desinstalación completada"))
         else:
             if is_appimage:
-                message = _("Error al desinstalar Swiftinstall Enhance AppImage - {}.").format(package_name)
+                message = _("Error al desinstalar AppImage - {}.").format(package_name)
+            elif is_pwa:
+                message = _("Error al eliminar la Web App {}.").format(package_name)
+            elif is_brew:
+                message = _("Error al desinstalar {} de Homebrew.").format(package_name)
             else:
                 message = _("Error al desinstalar {}.").format(package_name)
                 
@@ -1840,13 +1976,377 @@ class InstalledAppsWindow(Adw.Window):
             dialog.set_default_response("ok")
             self.status_label.set_text(_("Uy... ha habido un error cuando estaba desinstalándote la app"))
         
-        
         dialog.present(self)
         self.load_installed_apps()  # Refrescar la lista
 
 
+class PWAConfigWindow(Adw.Window):
+    def __init__(self, parent, callback):
+        super().__init__()
+        self.set_title(_("Crear PWA (Web App)"))
+        
+        # Obtener tamaño seguro de ventana
+        width, height = get_safe_window_size(450, 500, 0.8)
+        self.set_default_size(width, height)
+            
+        self.set_transient_for(parent)
+        self.set_modal(True)
+        self.add_css_class("main-window")
+        
+        self.callback = callback
+        self.icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "appimage.png")
+
+        # Header bar al estilo GNOME
+        header_bar = Adw.HeaderBar()
+        header_bar.set_title_widget(Adw.WindowTitle(title=_("Crear PWA")))
+        header_bar.add_css_class("header-bar")
+
+        # Contenido principal en un ToolbarView
+        toolbar_view = Adw.ToolbarView()
+        toolbar_view.add_top_bar(header_bar)
+        self.set_content(toolbar_view)
+
+        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        main_box.set_margin_top(16)
+        main_box.set_margin_bottom(16)
+        main_box.set_margin_start(16)
+        main_box.set_margin_end(16)
+        toolbar_view.set_content(main_box)
+
+        # Sección de la URL
+        url_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        url_section.add_css_class("card")
+        
+        url_label = Gtk.Label(label=_("Introduce la URL de la web"), xalign=0)
+        url_label.add_css_class("title-label")
+        url_section.append(url_label)
+        
+        url_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        self.url_entry = Gtk.Entry()
+        self.url_entry.set_placeholder_text(_("https://ejemplo.com"))
+        self.url_entry.set_hexpand(True)
+        url_hbox.append(self.url_entry)
+        
+        fetch_button = Gtk.Button()
+        fetch_icon = Gtk.Image.new_from_icon_name("view-refresh-symbolic")
+        fetch_button.set_child(fetch_icon)
+        fetch_button.set_tooltip_text(_("Cargar información de la web"))
+        fetch_button.connect("clicked", self.on_fetch_clicked)
+        url_hbox.append(fetch_button)
+        
+        url_section.append(url_hbox)
+        main_box.append(url_section)
+
+        # Sección del nombre e icono (inicialmente desactivada o vacía)
+        self.info_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        self.info_section.set_sensitive(False)
+        
+        # Nombre
+        name_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        name_box.add_css_class("card")
+        name_label = Gtk.Label(label=_("Nombre de la aplicación"), xalign=0)
+        name_label.add_css_class("title-label")
+        name_box.append(name_label)
+        self.name_entry = Gtk.Entry()
+        name_box.append(self.name_entry)
+        self.info_section.append(name_box)
+        
+        # Icono
+        icon_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        icon_box.add_css_class("card")
+        icon_label = Gtk.Label(label=_("Icono"), xalign=0)
+        icon_label.add_css_class("title-label")
+        icon_box.append(icon_label)
+        
+        icon_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        self.icon_image = Gtk.Image.new_from_file(self.icon_path)
+        self.icon_image.set_pixel_size(64)
+        icon_hbox.append(self.icon_image)
+        
+        change_icon_button = Gtk.Button(label=_("Cambiar icono..."))
+        change_icon_button.connect("clicked", self.on_change_icon_clicked)
+        change_icon_button.set_valign(Gtk.Align.CENTER)
+        icon_hbox.append(change_icon_button)
+        icon_box.append(icon_hbox)
+        self.info_section.append(icon_box)
+        
+        main_box.append(self.info_section)
+
+        # Spinner de carga
+        self.spinner = Gtk.Spinner()
+        self.spinner.set_size_request(32, 32)
+        self.spinner.set_halign(Gtk.Align.CENTER)
+        main_box.append(self.spinner)
+
+        # Botones de acción
+        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        button_box.set_halign(Gtk.Align.END)
+        button_box.set_margin_top(8)
+        
+        cancel_button = Gtk.Button(label=_("Cancelar"))
+        cancel_button.connect("clicked", lambda x: self.close())
+        button_box.append(cancel_button)
+        
+        self.create_button = Gtk.Button()
+        self.create_button.add_css_class("action-button")
+        create_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        create_icon = Gtk.Image.new_from_icon_name("emblem-system-symbolic")
+        create_box.prepend(create_icon)
+        create_label = Gtk.Label(label=_("¡Crear PWA!"))
+        create_box.append(create_label)
+        self.create_button.set_child(create_box)
+        self.create_button.connect("clicked", self.on_create_clicked)
+        self.create_button.set_sensitive(False)
+        button_box.append(self.create_button)
+        
+        main_box.append(button_box)
+
+    def on_fetch_clicked(self, button):
+        url = self.url_entry.get_text().strip()
+        if not url:
+            return
+        
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+            self.url_entry.set_text(url)
+
+        self.spinner.start()
+        self.spinner.set_visible(True)
+        self.info_section.set_sensitive(False)
+        
+        thread = threading.Thread(target=self.fetch_info_thread, args=(url,))
+        thread.daemon = True
+        thread.start()
+
+    def fetch_info_thread(self, url):
+        try:
+            # Intentar obtener el título de la página
+            response = requests.get(url, timeout=10, headers={'User-Agent': 'Mozilla/5.0'})
+            title = ""
+            if response.status_code == 200:
+                import re
+                match = re.search('<title>(.*?)</title>', response.text, re.IGNORECASE)
+                if match:
+                    title = match.group(1).strip()
+            
+            if not title:
+                # Fallback al dominio
+                from urllib.parse import urlparse
+                title = urlparse(url).netloc.replace("www.", "")
+
+            # Obtener el favicon usando el servicio de Google (más fiable que parsear HTML)
+            from urllib.parse import urlparse
+            domain = urlparse(url).netloc
+            favicon_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
+            
+            icon_temp_path = os.path.join(os.path.expanduser("~/.cache/swiftinstall"), f"pwa_{domain}.png")
+            os.makedirs(os.path.dirname(icon_temp_path), exist_ok=True)
+            
+            icon_response = requests.get(favicon_url, timeout=10)
+            if icon_response.status_code == 200:
+                with open(icon_temp_path, 'wb') as f:
+                    f.write(icon_response.content)
+                icon_to_use = icon_temp_path
+            else:
+                icon_to_use = os.path.join(os.path.dirname(os.path.abspath(__file__)), "appimage.png")
+
+            GLib.idle_add(self.on_info_fetched, title, icon_to_use)
+        except Exception as e:
+            print(f"Error fetching PWA info: {e}")
+            GLib.idle_add(self.on_info_fetched, "", self.icon_path)
+
+    def on_info_fetched(self, title, icon_path):
+        self.spinner.stop()
+        self.spinner.set_visible(False)
+        self.info_section.set_sensitive(True)
+        self.create_button.set_sensitive(True)
+        
+        if title:
+            self.name_entry.set_text(title)
+        
+        self.icon_path = icon_path
+        self.icon_image.set_from_file(icon_path)
+        return False
+
+    def on_change_icon_clicked(self, button):
+        dialog = Gtk.FileChooserNative(
+            title=_("Seleccionar icono para la PWA"),
+            transient_for=self,
+            action=Gtk.FileChooserAction.OPEN,
+            accept_label=_("Abrir"),
+            cancel_label=_("Cancelar")
+        )
+        dialog.connect("response", self._on_icon_dialog_response)
+        dialog.show()
+
+    def _on_icon_dialog_response(self, dialog, response):
+        if response == Gtk.ResponseType.ACCEPT:
+            file = dialog.get_file()
+            if file:
+                self.icon_path = file.get_path()
+                self.icon_image.set_from_file(self.icon_path)
+        dialog.destroy()
+
+    def on_create_clicked(self, button):
+        name = self.name_entry.get_text().strip()
+        url = self.url_entry.get_text().strip()
+        if name and url:
+            self.callback(name, url, self.icon_path)
+            self.close()
+
+
+class AppImageConfigWindow(Adw.Window):
+    def __init__(self, parent, file_path, callback):
+        super().__init__()
+        self.set_title(_("Configurar AppImage"))
+        
+        # Obtener tamaño seguro de ventana
+        width, height = get_safe_window_size(450, 400, 0.8)
+        self.set_default_size(width, height)
+            
+        self.set_transient_for(parent)
+        self.set_modal(True)
+        self.add_css_class("main-window")
+        
+        self.file_path = file_path
+        self.callback = callback
+        
+        # Nombre por defecto basado en el archivo
+        filename = os.path.basename(file_path)
+        self.default_name = os.path.splitext(filename)[0]
+        
+        # Icono por defecto de Swift Install
+        self.icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "appimage.png")
+
+        # Header bar al estilo GNOME
+        header_bar = Adw.HeaderBar()
+        header_bar.set_title_widget(Adw.WindowTitle(title=_("Configurar AppImage")))
+        header_bar.add_css_class("header-bar")
+
+        # Contenido principal en un ToolbarView
+        toolbar_view = Adw.ToolbarView()
+        toolbar_view.add_top_bar(header_bar)
+        self.set_content(toolbar_view)
+
+        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        main_box.set_margin_top(16)
+        main_box.set_margin_bottom(16)
+        main_box.set_margin_start(16)
+        main_box.set_margin_end(16)
+        toolbar_view.set_content(main_box)
+
+        # Sección del nombre
+        name_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        name_section.add_css_class("card")
+        
+        name_label = Gtk.Label(label=_("¿Cómo quieres llamar a la app?"), xalign=0)
+        name_label.add_css_class("title-label")
+        name_section.append(name_label)
+        
+        self.name_entry = Gtk.Entry()
+        self.name_entry.set_text(self.default_name)
+        self.name_entry.set_placeholder_text(_("Escribe el nombre de la aplicación..."))
+        name_section.append(self.name_entry)
+        
+        main_box.append(name_section)
+
+        # Sección del icono
+        icon_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        icon_section.add_css_class("card")
+        
+        icon_title = Gtk.Label(label=_("Ponle un icono chulo"), xalign=0)
+        icon_title.add_css_class("title-label")
+        icon_section.append(icon_title)
+        
+        icon_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        
+        self.icon_image = Gtk.Image.new_from_file(self.icon_path)
+        self.icon_image.set_pixel_size(64)
+        icon_hbox.append(self.icon_image)
+        
+        icon_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        
+        self.icon_label = Gtk.Label(label=_("Icono por defecto"), xalign=0)
+        self.icon_label.add_css_class("subtitle-label")
+        icon_vbox.append(self.icon_label)
+        
+        select_icon_button = Gtk.Button()
+        select_icon_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        select_icon_icon = Gtk.Image.new_from_icon_name("image-x-generic-symbolic")
+        select_icon_box.prepend(select_icon_icon)
+        select_icon_text = Gtk.Label(label=_("Seleccionar icono..."))
+        select_icon_box.append(select_icon_text)
+        select_icon_button.set_child(select_icon_box)
+        select_icon_button.connect("clicked", self.on_select_icon_clicked)
+        icon_vbox.append(select_icon_button)
+        
+        icon_hbox.append(icon_vbox)
+        icon_section.append(icon_hbox)
+        
+        main_box.append(icon_section)
+
+        # Botones de acción
+        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        button_box.set_halign(Gtk.Align.END)
+        button_box.set_margin_top(8)
+        
+        cancel_button = Gtk.Button(label=_("Cancelar"))
+        cancel_button.connect("clicked", lambda x: self.close())
+        button_box.append(cancel_button)
+        
+        self.install_button = Gtk.Button()
+        self.install_button.add_css_class("action-button")
+        install_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        install_icon = Gtk.Image.new_from_icon_name("emblem-system-symbolic")
+        install_box.prepend(install_icon)
+        install_label = Gtk.Label(label=_("¡Instalar!"))
+        install_box.append(install_label)
+        self.install_button.set_child(install_box)
+        self.install_button.connect("clicked", self.on_install_clicked)
+        button_box.append(self.install_button)
+        
+        main_box.append(button_box)
+
+    def on_select_icon_clicked(self, button):
+        dialog = Gtk.FileChooserNative(
+            title=_("Seleccionar icono para la aplicación"),
+            transient_for=self,
+            action=Gtk.FileChooserAction.OPEN,
+            accept_label=_("Abrir"),
+            cancel_label=_("Cancelar")
+        )
+        
+        filter_img = Gtk.FileFilter()
+        filter_img.set_name(_("Archivos de imagen"))
+        filter_img.add_mime_type("image/png")
+        filter_img.add_mime_type("image/jpeg")
+        filter_img.add_mime_type("image/svg+xml")
+        dialog.add_filter(filter_img)
+        
+        dialog.connect("response", self._on_icon_dialog_response)
+        dialog.show()
+
+    def _on_icon_dialog_response(self, dialog, response):
+        if response == Gtk.ResponseType.ACCEPT:
+            file = dialog.get_file()
+            if file:
+                self.icon_path = file.get_path()
+                self.icon_image.set_from_file(self.icon_path)
+                self.icon_label.set_text(os.path.basename(self.icon_path))
+        dialog.destroy()
+
+    def on_install_clicked(self, button):
+        custom_name = self.name_entry.get_text().strip()
+        if not custom_name:
+            custom_name = self.default_name
+        
+        # Llamar al callback del padre para proceder con la instalación
+        self.callback(custom_name, self.icon_path)
+        self.close()
+
+
 class PackageInstaller(Adw.ApplicationWindow):
-    def __init__(self, app):
+    def __init__(self, app, file_to_open=None):
         super().__init__(application=app)
         self.set_title("Swift Install")
         # Ajustar tamaño de ventana principal a la pantalla
@@ -1897,26 +2397,31 @@ class PackageInstaller(Adw.ApplicationWindow):
         toolbar_view.add_top_bar(header_bar)
         self.set_content(toolbar_view)
 
-        # Contenido principal con scroll si es necesario
-        if height > 500:
-            scrolled_main = Gtk.ScrolledWindow()
-            scrolled_main.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-            scrolled_main.set_propagate_natural_height(True)
-            toolbar_view.set_content(scrolled_main)
+        # Breakpoint para pantallas pequeñas
+        breakpoint = Adw.Breakpoint.new(Adw.BreakpointCondition.parse("max-width: 500px"))
+        # El setter con None puede fallar si no se mapea correctamente a GValue
+        self.add_breakpoint(breakpoint)
 
-            main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
-            main_box.set_margin_top(24)
-            main_box.set_margin_bottom(24)
-            main_box.set_margin_start(24)
-            main_box.set_margin_end(24)
-            scrolled_main.set_child(main_box)
-        else:
-            main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
-            main_box.set_margin_top(24)
-            main_box.set_margin_bottom(24)
-            main_box.set_margin_start(24)
-            main_box.set_margin_end(24)
-            toolbar_view.set_content(main_box)
+        # Usar Adw.Clamp para que se vea bien en pantallas grandes y pequeñas
+        clamp = Adw.Clamp()
+        clamp.set_maximum_size(600)
+        toolbar_view.set_content(clamp)
+
+        # Contenido principal siempre con scroll
+        scrolled_main = Gtk.ScrolledWindow()
+        scrolled_main.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scrolled_main.set_propagate_natural_height(True)
+        clamp.set_child(scrolled_main)
+
+        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
+        main_box.set_margin_top(24)
+        main_box.set_margin_bottom(24)
+        main_box.set_margin_start(24)
+        main_box.set_margin_end(24)
+        scrolled_main.set_child(main_box)
+        
+        # Verificar si brew está instalado
+        self.has_brew = shutil.which('brew') is not None
 
         # Sección de selección de archivo
         file_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
@@ -1955,8 +2460,49 @@ class PackageInstaller(Adw.ApplicationWindow):
         self.selected_file_label.add_css_class("subtitle-label")
         file_section.append(self.selected_file_label)
         
-        main_box.append(file_section)
+        # Entrada de texto para instalar por nombre (Apt o Brew)
+        name_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        name_section.set_margin_top(8)
         
+        name_label = Gtk.Label(label=_("O escribe el nombre del paquete"), xalign=0)
+        name_label.add_css_class("subtitle-label")
+        name_section.append(name_label)
+        
+        self.package_name_entry = Gtk.Entry()
+        self.package_name_entry.set_placeholder_text(_("ej: vlc, firefox, chrome..."))
+        self.package_name_entry.connect("changed", self.on_package_name_changed)
+        name_section.append(self.package_name_entry)
+
+        # Resultados de búsqueda (ListBox integrado justo debajo de la entrada)
+        self.search_results_scrolled = Gtk.ScrolledWindow()
+        self.search_results_scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self.search_results_scrolled.set_min_content_height(100)
+        self.search_results_scrolled.set_max_content_height(300)
+        self.search_results_scrolled.set_propagate_natural_height(True)
+        self.search_results_scrolled.set_visible(False)
+        # Quitamos la clase "card" para que no tenga borde propio y se integre en la tarjeta superior
+        
+        self.search_results_list = Gtk.ListBox()
+        self.search_results_list.add_css_class("navigation-sidebar") # Estilo más limpio
+        self.search_results_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.search_results_list.connect("row-activated", self.on_search_result_activated)
+        self.search_results_scrolled.set_child(self.search_results_list)
+        name_section.append(self.search_results_scrolled)
+
+        # Spinner de búsqueda
+        self.search_spinner = Gtk.Spinner()
+        self.search_spinner.set_size_request(24, 24)
+        self.search_spinner.set_halign(Gtk.Align.CENTER)
+        self.search_spinner.set_margin_top(10)
+        self.search_spinner.set_visible(False)
+        name_section.append(self.search_spinner)
+
+        file_section.append(name_section)
+
+        main_box.append(file_section)
+
+        # Variables para búsqueda
+        self.search_timer = None
         # Sección de acciones
         actions_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
         actions_section.add_css_class("card")
@@ -2049,11 +2595,18 @@ class PackageInstaller(Adw.ApplicationWindow):
         self.antivirus_button.connect("clicked", self.on_antivirus_clicked)
         buttons_box3.append(self.antivirus_button)
         
-        # Placeholder para futuro botón (mantener simetría)
-        placeholder_button = Gtk.Box()  # Caja vacía para mantener el espaciado
-        buttons_box3.append(placeholder_button)
+        # Botón de crear PWA - NUEVO
+        self.pwa_button = Gtk.Button()
+        self.pwa_button.add_css_class("secondary-button")
+        pwa_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        pwa_icon = Gtk.Image.new_from_icon_name("web-browser-symbolic")
+        pwa_box.prepend(pwa_icon)
+        pwa_label = Gtk.Label(label=_("Crear PWA"))
+        pwa_box.append(pwa_label)
+        self.pwa_button.set_child(pwa_box)
+        self.pwa_button.connect("clicked", self.on_pwa_clicked)
+        buttons_box3.append(self.pwa_button)
         
-        actions_section.append(buttons_box2)
         actions_section.append(buttons_box3)
         main_box.append(actions_section)
         
@@ -2085,10 +2638,20 @@ class PackageInstaller(Adw.ApplicationWindow):
         main_box.append(progress_section)
 
         self.installed_package = None
-        self.file_path = None
+        self.file_path = file_to_open
+        
+        if self.file_path:
+            GLib.idle_add(self.load_initial_file)
         
         # Comprobar actualizaciones al iniciar la aplicación
         GLib.timeout_add(500, self.check_updates_on_startup)
+    
+    def load_initial_file(self):
+        if self.file_path and os.path.exists(self.file_path):
+            self.selected_file_label.set_text(_("Archivo seleccionado: {}").format(os.path.basename(self.file_path)))
+            self.install_button.set_sensitive(True)
+            self.status_label.set_text(_("Estoy listo para instalar: {}").format(os.path.basename(self.file_path)))
+        return False
     
     def on_file_chooser_clicked(self, button):
         dialog = Gtk.FileChooserNative(
@@ -2113,26 +2676,67 @@ class PackageInstaller(Adw.ApplicationWindow):
                 self.selected_file_label.set_text(_("Archivo seleccionado: {}").format(os.path.basename(self.file_path)))
                 self.install_button.set_sensitive(True)
                 self.status_label.set_text(_("Estoy listo para instalar: {}").format(os.path.basename(self.file_path)))
+                # Limpiar la entrada de texto y ocultar resultados
+                self.package_name_entry.set_text("")
+                self.search_results_scrolled.set_visible(False)
         dialog.destroy()
 
-    def create_desktop_file(self, app_name):
-        # Obtener la ruta del icono
-        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "appimage.png")
-        
+    def create_desktop_file(self, app_name, display_name=None, icon_path=None):
+        if not display_name:
+            display_name = app_name
+        if not icon_path:
+            # Obtener la ruta del icono por defecto
+            icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "appimage.png")
+
+        # Determinar la extensión del icono para el destino
+        icon_ext = os.path.splitext(icon_path)[1].lower()
+        if not icon_ext or icon_ext not in ['.png', '.jpg', '.jpeg', '.svg', '.ico']:
+            # Fallback a .png si no se detecta extensión válida
+            icon_ext = '.png'
+            
+        target_icon_path = f"/usr/share/pixmaps/{app_name}{icon_ext}"
+
         # Crear el contenido del archivo .desktop
         desktop_content = f"""[Desktop Entry]
 Type=Application
-Name={app_name}
+Name={display_name}
 Exec=/usr/bin/{app_name}
-Icon={icon_path}
+Icon={target_icon_path}
 Terminal=false
 Categories=Utility;
+X-SwiftInstall=AppImage
 """
-        
-        # Comando para crear el archivo .desktop
-        desktop_path = f"/usr/share/applications/{app_name}.desktop"
-        return f"echo '{desktop_content}' > {desktop_path}"
+        # Escapar comillas simples para el comando echo
+        escaped_content = desktop_content.replace("'", "'\\''")
 
+        # Comando para crear el archivo .desktop y copiar el icono
+        desktop_path = f"/usr/share/applications/{app_name}.desktop"
+        return f"cp '{icon_path}' '{target_icon_path}' && echo '{escaped_content}' > '{desktop_path}'"
+
+    def proceed_with_appimage_installation(self, display_name, icon_path):
+        self.install_button.set_sensitive(False)
+        self.fix_deps_button.set_sensitive(False)
+        self.apps_button.set_sensitive(False)
+        self.clean_button.set_sensitive(False)
+        self.antivirus_button.set_sensitive(False)
+        self.status_label.set_text(_("Instalando..."))
+        self.progress_bar.set_fraction(0.0)
+
+        # Nombre interno (basado en el archivo, sin espacios)
+        filename = os.path.basename(self.file_path)
+        app_name = os.path.splitext(filename)[0].replace(" ", "_").lower()
+        
+        # Crear comandos
+        cmd = [
+            'pkexec', 'bash', '-c',
+            f'chmod +x "{self.file_path}" && ' +
+            f'cp "{self.file_path}" /usr/bin/{app_name} && ' +
+            self.create_desktop_file(app_name, display_name, icon_path)
+        ]
+        
+        thread = threading.Thread(target=self.run_installation, args=(cmd,))
+        thread.daemon = True
+        thread.start()
     def check_updates_on_startup(self):
         thread = threading.Thread(target=self.check_updates_thread)
         thread.daemon = True
@@ -2199,8 +2803,13 @@ Categories=Utility;
         return False
 
     def on_install_clicked(self, widget):
+        # Si no hay archivo seleccionado, ver si hay algo en la entrada de texto
         if not self.file_path:
-            return
+            package_name = self.package_name_entry.get_text().strip()
+            if package_name:
+                self.file_path = package_name
+            else:
+                return
             
         self.install_button.set_sensitive(False)
         self.fix_deps_button.set_sensitive(False)
@@ -2211,25 +2820,33 @@ Categories=Utility;
         self.progress_bar.set_fraction(0.0)
 
         file_extension = os.path.splitext(self.file_path)[1].lower()
+        
+        # Detectar si es un paquete de Homebrew
+        is_brew_file = self.has_brew and file_extension == '.rb'
+        is_name_only = not file_extension
 
         if file_extension == '.deb':
             cmd = ['pkexec', 'dpkg', '-i', self.file_path]
         elif file_extension == '.rpm':
             cmd = ['pkexec', 'rpm', '-i', self.file_path]
+        elif is_brew_file:
+            cmd = ['brew', 'install', '--formula', self.file_path]
+        elif is_name_only:
+            # Si tiene prefijo brew: forzamos brew
+            if self.file_path.startswith('brew:'):
+                pkg_name = self.file_path.replace('brew:', '', 1)
+                cmd = ['brew', 'install', pkg_name]
+            elif self.has_brew:
+                # Si no, probamos con apt primero (más común en Linux)
+                # pero permitimos que el usuario elija o simplemente usamos apt
+                cmd = ['pkexec', 'apt-get', 'install', '-y', self.file_path]
+            else:
+                cmd = ['pkexec', 'apt-get', 'install', '-y', self.file_path]
         elif file_extension == '.appimage':
-            # Obtener el nombre del archivo sin extensión
-            app_name = os.path.basename(self.file_path).replace('.appimage', '')
-            
-            # Crear comandos para:
-            # 1. Hacer ejecutable el AppImage
-            # 2. Mover el AppImage a /usr/bin
-            # 3. Crear el archivo .desktop
-            cmd = [
-                'pkexec', 'bash', '-c',
-                f'chmod +x "{self.file_path}" && ' +
-                f'cp "{self.file_path}" /usr/bin/{app_name} && ' +
-                self.create_desktop_file(app_name)
-            ]
+            # En lugar de instalar directamente, abrimos la ventana de configuración
+            config_window = AppImageConfigWindow(self, self.file_path, self.proceed_with_appimage_installation)
+            config_window.present()
+            return
         elif file_extension in ('.tar.xz', '.tar.gz', '.tgz'):
             extract_dir = os.path.expanduser('~/.local')
             cmd = ['tar', '-xvf', self.file_path, '-C', extract_dir]
@@ -2270,6 +2887,76 @@ Categories=Utility;
         antivirus_window = AntivirusWindow(self)
         antivirus_window.present()
 
+    def on_pwa_clicked(self, widget):
+        pwa_window = PWAConfigWindow(self, self.proceed_with_pwa_installation)
+        pwa_window.present()
+
+    def get_pwa_command(self, url):
+        """Busca el mejor navegador para ejecutar una PWA."""
+        # Prioridad: Epiphany (GNOME Web), Chrome/Chromium, Brave, Edge
+        if shutil.which('epiphany'):
+            return f'epiphany --application-mode="{url}"'
+        elif shutil.which('google-chrome'):
+            return f'google-chrome --app={url}'
+        elif shutil.which('google-chrome-stable'):
+            return f'google-chrome-stable --app={url}'
+        elif shutil.which('chromium'):
+            return f'chromium --app={url}'
+        elif shutil.which('chromium-browser'):
+            return f'chromium-browser --app={url}'
+        elif shutil.which('brave'):
+            return f'brave --app={url}'
+        elif shutil.which('microsoft-edge'):
+            return f'microsoft-edge --app={url}'
+        # Fallback al navegador por defecto (no será modo app puro)
+        return f'xdg-open {url}'
+
+    def proceed_with_pwa_installation(self, display_name, url, icon_path):
+        self.install_button.set_sensitive(False)
+        self.fix_deps_button.set_sensitive(False)
+        self.apps_button.set_sensitive(False)
+        self.clean_button.set_sensitive(False)
+        self.antivirus_button.set_sensitive(False)
+        self.pwa_button.set_sensitive(False)
+        self.status_label.set_text(_("Creando PWA..."))
+        self.progress_bar.set_fraction(0.0)
+
+        # Nombre interno
+        app_name = display_name.lower().replace(" ", "_").replace(".", "_")
+        if not app_name:
+            import time
+            app_name = f"pwa_{int(time.time())}"
+        
+        exec_cmd = self.get_pwa_command(url)
+        
+        # Determinar la extensión del icono para el destino
+        icon_ext = os.path.splitext(icon_path)[1].lower()
+        if not icon_ext or icon_ext not in ['.png', '.jpg', '.jpeg', '.svg', '.ico']:
+            icon_ext = '.png'
+        
+        target_icon_path = f"/usr/share/pixmaps/{app_name}{icon_ext}"
+        
+        desktop_content = f"""[Desktop Entry]
+Type=Application
+Name={display_name}
+Exec={exec_cmd}
+Icon={target_icon_path}
+Terminal=false
+Categories=Network;WebBrowser;
+X-SwiftInstall=PWA
+"""
+        escaped_content = desktop_content.replace("'", "'\\''")
+        desktop_path = f"/usr/share/applications/{app_name}.desktop"
+        
+        cmd = [
+            'pkexec', 'bash', '-c',
+            f"cp '{icon_path}' '{target_icon_path}' && echo '{escaped_content}' > '{desktop_path}'"
+        ]
+        
+        thread = threading.Thread(target=self.run_installation, args=(cmd,))
+        thread.daemon = True
+        thread.start()
+
     def run_installation(self, cmd):
         try:
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
@@ -2277,18 +2964,17 @@ Categories=Utility;
             # Usar communicate() directamente para evitar bloqueos por buffer
             stdout, stderr = process.communicate()
             
-            # Simular progreso ya que no podemos leer en tiempo real fiablemente sin riesgo de bloqueo
-            for i in range(10):
-                time.sleep(0.1)
-                GLib.idle_add(self.update_progress)
-            
             if process.returncode == 0:
                 self.installed_package = self.file_path
                 
                 # Mensaje especial para AppImage
-                if self.file_path.lower().endswith('.appimage'):
-                    app_name = os.path.basename(self.file_path).replace('.appimage', '')
+                if self.file_path and self.file_path.lower().endswith('.appimage'):
+                    filename = os.path.basename(self.file_path)
+                    app_name = os.path.splitext(filename)[0]
                     GLib.idle_add(self.installation_complete, _("AppImage instalado como {}. Se ha creado un acceso directo.").format(app_name))
+                elif not self.file_path:
+                    # Probablemente una PWA
+                    GLib.idle_add(self.installation_complete, _("¡Web App creada correctamente! Ya la tienes disponible en tu menú."))
                 else:
                     GLib.idle_add(self.installation_complete, _("He instalado todo bien, ¡disfrútala!"))
             else:
@@ -2302,11 +2988,6 @@ Categories=Utility;
             
             # Usar communicate() directamente para evitar bloqueos por buffer
             stdout, stderr = process.communicate()
-            
-            # Simular progreso
-            for i in range(10):
-                time.sleep(0.1)
-                GLib.idle_add(self.update_progress)
             
             if process.returncode == 0:
                 GLib.idle_add(self.fix_deps_complete, _("He arreglado las dependencias"))
@@ -2422,7 +3103,7 @@ Categories=Utility;
         return found_pattern is not None
 
     def extract_missing_packages(self, stderr_output):
-        """Extrae los nombres de paquetes faltantes del error."""
+        """Extrae los nombres de paquetes faltantes del error con mejor precisión."""
         import re
         
         missing_packages = set()
@@ -2435,25 +3116,42 @@ Categories=Utility;
             r'(\w+(?:[-_]\w+)*)\s*:\s*Depends:',
             r'Depends:\s*(\w+(?:[-_]\w+)*)',
             r'package\s+(\w+(?:[-_]\w+)*)\s+is\s+not\s+installed',
+            r'The following packages have unmet dependencies:',
             # Patrones en español
             r'depende\s+de\s+([a-zA-Z0-9][a-zA-Z0-9\-\.]*)',
             r'El\s+paquete\s+[`\'""]([a-zA-Z0-9][a-zA-Z0-9\-\.]*)[`\'""]\s+no\s+está\s+instalado',
             r'([a-zA-Z0-9][a-zA-Z0-9\-\.]*)\s+\([^)]*\);\s+sin\s+embargo:',
-            r'([a-zA-Z0-9][a-zA-Z0-9\-\.]*)\s+depende\s+de'
+            r'([a-zA-Z0-9][a-zA-Z0-9\-\.]*)\s+depende\s+de',
+            r'Problemas de dependencias - se deja sin configurar'
         ]
         
-        print(f"DEBUG: Extrayendo paquetes del error: {stderr_output[:200]}...")  # Debug temporal
+        # Bloques de error comunes de apt/dpkg
+        if "unmet dependencies" in stderr_output.lower() or "problemas de dependencias" in stderr_output.lower():
+            # Intentar extraer paquetes después de "Depends:" o "depende de"
+            lines = stderr_output.split('\n')
+            for line in lines:
+                if "Depends:" in line or "depende de" in line:
+                    # Extraer el nombre del paquete (suele ser la primera palabra después del prefijo)
+                    match = re.search(r'(?:Depends:|depende de)\s+([a-zA-Z0-9][a-zA-Z0-9\-\.]*)', line)
+                    if match:
+                        missing_packages.add(match.group(1))
         
         for pattern in patterns:
             matches = re.findall(pattern, stderr_output, re.IGNORECASE)
-            print(f"DEBUG: Patrón '{pattern}' encontró: {matches}")  # Debug temporal
-            missing_packages.update(matches)
+            for m in matches:
+                if isinstance(m, str):
+                    missing_packages.add(m)
+                elif isinstance(m, tuple) and m[0]:
+                    missing_packages.add(m[0])
         
-        # Filtrar paquetes comunes que no necesitan instalación manual
-        filter_out = {'but', 'is', 'not', 'installed', 'depends', 'on', 'package', 'de', 'el', 'paquete', 'sin', 'embargo'}
+        # Filtrar paquetes comunes que no necesitan instalación manual y palabras de control
+        filter_out = {
+            'but', 'is', 'not', 'installed', 'depends', 'on', 'package', 'de', 'el', 'paquete', 
+            'sin', 'embargo', 'the', 'following', 'packages', 'have', 'unmet', 'dependencies',
+            'problemas', 'configurar', 'deja'
+        }
         missing_packages = {pkg for pkg in missing_packages if pkg.lower() not in filter_out and len(pkg) > 2}
         
-        print(f"DEBUG: Paquetes finales extraídos: {list(missing_packages)}")  # Debug temporal
         return list(missing_packages)
 
     def handle_missing_dependencies(self, stderr_output):
@@ -2652,13 +3350,10 @@ Categories=Utility;
         elif file_extension == '.rpm':
             cmd = ['pkexec', 'rpm', '-i', self.file_path]
         elif file_extension == '.appimage':
-            app_name = os.path.basename(self.file_path).replace('.appimage', '')
-            cmd = [
-                'pkexec', 'bash', '-c',
-                f'chmod +x "{self.file_path}" && ' +
-                f'cp "{self.file_path}" /usr/bin/{app_name} && ' +
-                self.create_desktop_file(app_name)
-            ]
+            # Para AppImage usamos la nueva lógica (aunque reintentar AppImage es raro)
+            config_window = AppImageConfigWindow(self, self.file_path, self.proceed_with_appimage_installation)
+            config_window.present()
+            return
         elif file_extension in ('.tar.xz', '.tar.gz', '.tgz'):
             extract_dir = os.path.expanduser('~/.local')
             cmd = ['tar', '-xvf', self.file_path, '-C', extract_dir]
@@ -2676,16 +3371,137 @@ Categories=Utility;
     def open_inled_es(self, widget):
         safe_open_url("https://inled.es")
     
+    def on_package_name_changed(self, entry):
+        text = entry.get_text().strip()
+        
+        # Si hay texto, anulamos la selección de archivo previo para evitar confusiones
+        if text:
+            if self.file_path:
+                self.file_path = None
+                self.selected_file_label.set_text(_("Aún no has seleccionado ningún archivo"))
+            self.install_button.set_sensitive(True)
+        elif not self.file_path:
+            self.install_button.set_sensitive(False)
+
+        # Gestionar la búsqueda con un pequeño retraso (debounce)
+        if self.search_timer:
+            GLib.source_remove(self.search_timer)
+            self.search_timer = None
+
+        if len(text) >= 3:
+            self.search_timer = GLib.timeout_add(500, self.perform_package_search, text)
+        else:
+            self.search_results_scrolled.set_visible(False)
+
+    def perform_package_search(self, query):
+        self.search_timer = None
+        # Mostrar y activar spinner
+        self.search_spinner.set_visible(True)
+        self.search_spinner.start()
+        # Ocultar resultados anteriores mientras busca
+        self.search_results_scrolled.set_visible(False)
+        
+        thread = threading.Thread(target=self.search_thread, args=(query,))
+        thread.daemon = True
+        thread.start()
+        return False
+
+    def search_thread(self, query):
+        results = []
+        
+        # Buscar en APT
+        try:
+            apt_output = subprocess.check_output(['apt-cache', 'search', query], timeout=5).decode('utf-8')
+            for line in apt_output.split('\n')[:10]: # Limitar a 10 resultados
+                if line.strip():
+                    pkg_name = line.split(' - ')[0].strip()
+                    desc = line.split(' - ')[1].strip() if ' - ' in line else ""
+                    results.append({'name': pkg_name, 'desc': desc, 'source': 'apt'})
+        except:
+            pass
+
+        # Buscar en Homebrew
+        if self.has_brew:
+            try:
+                brew_output = subprocess.check_output(['brew', 'search', query], timeout=5).decode('utf-8')
+                for line in brew_output.split('\n')[:10]:
+                    if line.strip() and not line.startswith('=='):
+                        results.append({'name': line.strip(), 'desc': _("Fórmula de Homebrew"), 'source': 'brew'})
+            except:
+                pass
+        
+        GLib.idle_add(self.show_search_results, results)
+
+    def show_search_results(self, results):
+        # Detener y ocultar spinner
+        self.search_spinner.stop()
+        self.search_spinner.set_visible(False)
+        
+        # Limpiar lista anterior
+        child = self.search_results_list.get_first_child()
+        while child:
+            self.search_results_list.remove(child)
+            child = self.search_results_list.get_first_child()
+
+        if not results:
+            self.search_results_scrolled.set_visible(False)
+            return
+
+        for res in results:
+            row = Gtk.ListBoxRow()
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            box.set_margin_top(6)
+            box.set_margin_bottom(6)
+            box.set_margin_start(12)
+            box.set_margin_end(12)
+            
+            icon_name = "package-x-generic-symbolic" if res['source'] == 'apt' else "system-software-install-symbolic"
+            icon = Gtk.Image.new_from_icon_name(icon_name)
+            icon.set_opacity(0.7)
+            box.append(icon)
+            
+            vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+            name_label = Gtk.Label(label=res['name'], xalign=0)
+            name_label.add_css_class("title-label") 
+            vbox.append(name_label)
+            
+            desc_label = Gtk.Label(label=res['desc'], xalign=0)
+            desc_label.set_ellipsize(3) # Pango.EllipsizeMode.END
+            desc_label.add_css_class("subtitle-label")
+            desc_label.set_opacity(0.8)
+            vbox.append(desc_label)
+            
+            box.append(vbox)
+            row.set_child(box)
+            # Guardar datos en el row para recuperarlos al activar
+            row.pkg_name = res['name']
+            row.source = res['source']
+            
+            self.search_results_list.append(row)
+        
+        self.search_results_scrolled.set_visible(True)
+
+    def on_search_result_activated(self, listbox, row):
+        pkg_name = row.pkg_name
+        if row.source == 'brew':
+            pkg_name = f"brew:{pkg_name}"
+            
+        self.package_name_entry.set_text(pkg_name)
+        self.search_results_scrolled.set_visible(False)
+        self.install_button.set_sensitive(True)
+
     def on_about_clicked(self, widget):
         about_dialog = Adw.AboutWindow(
             transient_for=self,
             modal=True,
             application_name="Swift Install",
-            application_icon="package-x-generic-symbolic",
+            application_icon="es.inled.SwiftInstall",
             version=CURRENT_VERSION,
-            comments="Soy un instalador de paquetes gráfico para Linux. Espero que disfrutes usándome",
-            license_type=Gtk.License.GPL_3_0,
-            website="https://inled.es",
+            comments=_("Instalador de paquetes gráfico para Linux."),
+            copyright="© 2026 Inled Group",
+            license_type=Gtk.License.CUSTOM,
+            license="MIT-INLED",
+            website="https://license.inled.es",
             developers=["Inled Group"]
         )
         about_dialog.present()
@@ -2756,17 +3572,35 @@ class SwiftInstallApp(Adw.Application):
         super().__init__(application_id="com.inled.swiftinstall", flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
         self.connect("activate", self.on_activate)
         self.connect("command-line", self.on_command_line)
+        self.file_to_open = None
     
     def on_command_line(self, app, command_line):
+        args = command_line.get_arguments()
+        if len(args) > 1:
+            file_path = args[1]
+            if not os.path.isabs(file_path):
+                cwd = command_line.get_cwd()
+                file_path = os.path.join(cwd, file_path)
+            self.file_to_open = file_path
+        
         app.activate()
         return 0
 
     def on_activate(self, app):
+        # Buscar si ya hay una ventana abierta
+        windows = app.get_windows()
+        if windows:
+            windows[0].present()
+            if self.file_to_open:
+                windows[0].file_path = self.file_to_open
+                windows[0].load_initial_file()
+            return
+
         missing_deps = check_dependencies()
         # Cargar el CSS para el estilo GNOME moderno
         load_css()
         
-        win = PackageInstaller(app)
+        win = PackageInstaller(app, file_to_open=self.file_to_open)
         win.present()
 
 def Component():
@@ -2784,4 +3618,5 @@ if __name__ == "__main__":
             traceback.print_exc(file=f)
         # Intentar mostrar dialogo de error con zenity si es posible, o print
         print(f"Critical error: {e}", file=sys.stderr)
-        sys.exit(1) 
+        sys.exit(1)
+ 

@@ -636,6 +636,3 @@ msgstr "The Web App {} has been successfully removed."
 
 msgid "Error al eliminar la Web App {}."
 msgstr "Error removing the Web App {}."
-
-msgid "Instalador de paquetes gráfico para Linux."
-msgstr "Graphical package installer for Linux."
