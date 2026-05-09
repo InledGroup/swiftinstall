@@ -625,9 +625,6 @@ msgstr "Creating PWA..."
 msgid "¡Web App creada correctamente! Ya la tienes disponible en tu menú."
 msgstr "Web App created successfully! It's now available in your menu."
 
-msgid "AppImage instalado como {}. Se ha creado un acceso directo."
-msgstr "AppImage installed as {. A shortcut has been created."
-
 msgid "¿Deseas desinstalar {}? (Web App)"
 msgstr "Do you want to uninstall {}? (Web App)"
 

@@ -13,7 +13,7 @@ import shutil
 from packaging import version
 
 # Versión actual de la aplicación
-CURRENT_VERSION = "9.0"  # Esto se cambia según haya una nueva release
+CURRENT_VERSION = "10.0"  # Esto se cambia según haya una nueva release
 GITHUB_REPO = "InledGroup/swiftinstall"
 
 import locale
@@ -3495,11 +3495,13 @@ X-SwiftInstall=PWA
             transient_for=self,
             modal=True,
             application_name="Swift Install",
-            application_icon="package-x-generic-symbolic",
+            application_icon="es.inled.SwiftInstall",
             version=CURRENT_VERSION,
-            comments="Soy un instalador de paquetes gráfico para Linux. Espero que disfrutes usándome",
-            license_type=Gtk.License.GPL_3_0,
-            website="https://inled.es",
+            comments=_("Instalador de paquetes gráfico para Linux."),
+            copyright="© 2026 Inled Group",
+            license_type=Gtk.License.CUSTOM,
+            license="MIT-INLED",
+            website="https://license.inled.es",
             developers=["Inled Group"]
         )
         about_dialog.present()
