@@ -35,6 +35,24 @@ gettext.bindtextdomain('appinstall', LOCALE_DIR)
 gettext.textdomain('appinstall')
 _ = gettext.gettext
 
+# Configurar el tema de iconos para incluir directorios locales (útil para ejecución sin instalar)
+def setup_icon_theme():
+    try:
+        display = Gdk.Display.get_default()
+        if not display:
+            # Si no hay display aún, probamos a obtener el tema por defecto
+            theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+        else:
+            theme = Gtk.IconTheme.get_for_display(display)
+            
+        local_dir = os.path.dirname(os.path.abspath(__file__))
+        theme.add_search_path(local_dir)
+        theme.add_search_path(os.path.join(local_dir, "appinstall/usr/share/pixmaps"))
+        # Añadir también el directorio actual por si acaso
+        theme.add_search_path(os.getcwd())
+    except Exception as e:
+        print(f"Advertencia al configurar tema de iconos: {e}")
+
 class PackageManager:
     def search(self, query):
         raise NotImplementedError()
@@ -2535,22 +2553,8 @@ class PackageInstaller(Adw.ApplicationWindow):
         super().__init__(application=app)
         self.set_title("App Install")
         
-        # Intentar cargar el icono de la aplicación
-        icon_name = "es.inled.AppInstall"
-        
-        # Si estamos ejecutando localmente, intentar añadir el path local al IconTheme
-        local_dir = os.path.dirname(os.path.abspath(__file__))
-        local_icon = os.path.join(local_dir, f"{icon_name}.png")
-        if os.path.exists(local_icon):
-            try:
-                display = Gdk.Display.get_default()
-                if display:
-                    theme = Gtk.IconTheme.get_for_display(display)
-                    theme.add_search_path(local_dir)
-            except Exception as e:
-                print(f"Error cargando ruta de icono local: {e}")
-        
-        self.set_icon_name(icon_name)
+        # El nombre del icono debe coincidir con el archivo es.inled.AppInstall.png
+        self.set_icon_name("es.inled.AppInstall")
 
         # Ajustar tamaño de ventana principal a la pantalla
         width, height = get_safe_window_size(600, 500, 0.9)
@@ -3707,6 +3711,18 @@ X-AppInstall=PWA
             website="https://license.inled.es",
             developers=["Inled Group"]
         )
+        
+        # Intentar cargar icono local si no se encuentra en el tema
+        local_icon = os.path.join(os.path.dirname(os.path.abspath(__file__)), "es.inled.AppInstall.png")
+        if os.path.exists(local_icon):
+            try:
+                # Gio.File.new_for_path is more robust
+                file = Gio.File.new_for_path(local_icon)
+                texture = Gdk.Texture.new_from_file(file)
+                about_dialog.set_application_icon_paintable(texture)
+            except Exception as e:
+                print(f"No se pudo cargar el icono paintable: {e}")
+                
         about_dialog.present()
 def check_dependencies():
     """Verifica que todas las dependencias necesarias estén instaladas."""
@@ -3798,6 +3814,9 @@ class AppInstallApp(Adw.Application):
                 windows[0].file_path = self.file_to_open
                 windows[0].load_initial_file()
             return
+
+        # Configurar el tema de iconos para incluir el directorio local (para ejecución sin instalar)
+        setup_icon_theme()
 
         missing_deps = check_dependencies()
         # Cargar el CSS para el estilo GNOME moderno
