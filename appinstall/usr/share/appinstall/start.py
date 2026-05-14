@@ -3716,12 +3716,10 @@ X-AppInstall=PWA
         local_icon = os.path.join(os.path.dirname(os.path.abspath(__file__)), "es.inled.AppInstall.png")
         if os.path.exists(local_icon):
             try:
-                # Gio.File.new_for_path is more robust
-                file = Gio.File.new_for_path(local_icon)
-                texture = Gdk.Texture.new_from_file(file)
+                texture = Gdk.Texture.new_from_filename(local_icon)
                 about_dialog.set_application_icon_paintable(texture)
             except Exception as e:
-                print(f"No se pudo cargar el icono paintable: {e}")
+                print(f"No se pudo cargar el icono desde archivo: {e}")
                 
         about_dialog.present()
 def check_dependencies():
@@ -3788,10 +3786,15 @@ def show_dependencies_dialog(parent_window, missing_deps):
 
 class AppInstallApp(Adw.Application):
     def __init__(self):
-        super().__init__(application_id="com.inled.appinstall", flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
+        # El ID debe coincidir con el nombre del archivo .desktop para una integración perfecta en GNOME
+        super().__init__(application_id="es.inled.AppInstall", flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
         self.connect("activate", self.on_activate)
         self.connect("command-line", self.on_command_line)
         self.file_to_open = None
+        
+        # Establecer el nombre del programa y la aplicación
+        GLib.set_prgname("es.inled.AppInstall")
+        GLib.set_application_name("App Install")
     
     def on_command_line(self, app, command_line):
         args = command_line.get_arguments()
@@ -3826,6 +3829,8 @@ class AppInstallApp(Adw.Application):
         win.present()
 
 def Component():
+    # Inicializar el tema de iconos antes de crear la app
+    setup_icon_theme()
     app = AppInstallApp()
     return app.run(sys.argv)
 

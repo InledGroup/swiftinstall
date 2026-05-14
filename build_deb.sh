@@ -21,6 +21,11 @@ cp start.py appinstall/usr/share/appinstall/
 cp styles.css appinstall/usr/share/appinstall/
 cp appimage.png appinstall/usr/share/appinstall/
 
+# Asegurar que los iconos están en hicolor también
+mkdir -p appinstall/usr/share/icons/hicolor/512x512/apps/
+cp es.inled.AppInstall.png appinstall/usr/share/icons/hicolor/512x512/apps/es.inled.AppInstall.png
+cp es.inled.AppInstall.png appinstall/usr/share/pixmaps/es.inled.AppInstall.png
+
 # Ajustar permisos necesarios para el paquete Debian
 echo "Ajustando permisos..."
 chmod -R 755 appinstall/usr
