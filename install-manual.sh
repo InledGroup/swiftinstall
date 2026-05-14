@@ -1,30 +1,30 @@
 #!/bin/bash
 
-# Script de instalación manual de SwiftInstall
+# Script de instalación manual de AppInstall
 
-echo "Instalando SwiftInstall manualmente..."
+echo "Instalando AppInstall manualmente..."
 
 # Crear directorios
-sudo mkdir -p /usr/share/swiftinstall
+sudo mkdir -p /usr/share/appinstall
 sudo mkdir -p /usr/share/applications
 sudo mkdir -p /usr/share/pixmaps
 
 # Copiar archivos
-sudo cp start.py /usr/share/swiftinstall/
-sudo cp styles.css /usr/share/swiftinstall/
-sudo cp appimage.png /usr/share/swiftinstall/
-sudo cp swiftinstall/usr/share/applications/swiftinstall.desktop /usr/share/applications/
-sudo cp swiftinstall/usr/share/pixmaps/swiftinstall.png /usr/share/pixmaps/
+sudo cp start.py /usr/share/appinstall/
+sudo cp styles.css /usr/share/appinstall/
+sudo cp appimage.png /usr/share/appinstall/
+sudo cp appinstall/usr/share/applications/appinstall.desktop /usr/share/applications/
+sudo cp appinstall/usr/share/pixmaps/appinstall.png /usr/share/pixmaps/
 
 # Crear script ejecutable
-sudo tee /usr/bin/swiftinstall > /dev/null << 'EOF'
+sudo tee /usr/bin/appinstall > /dev/null << 'EOF'
 #!/bin/bash
-python3 "/usr/share/swiftinstall/start.py"
+python3 "/usr/share/appinstall/start.py"
 EOF
 
 # Dar permisos
-sudo chmod +x /usr/bin/swiftinstall
+sudo chmod +x /usr/bin/appinstall
 
-echo "SwiftInstall instalado correctamente!"
-echo "Puedes ejecutarlo con: swiftinstall"
-echo "O buscarlo en el menú de aplicaciones como 'Swift Install'"
+echo "AppInstall instalado correctamente!"
+echo "Puedes ejecutarlo con: appinstall"
+echo "O buscarlo en el menú de aplicaciones como 'App Install'"

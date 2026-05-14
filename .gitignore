@@ -23,7 +23,7 @@ wheels/
 
 # Logs
 *.log
-swiftinstall_debug.log
+appinstall_debug.log
 
 # OS
 .DS_Store
@@ -34,8 +34,8 @@ swiftinstall_debug.log
 ehthumbs.db
 Thumbs.db
 
-# SwiftInstall specific
+# AppInstall specific
 archive/
 *.deb
 *.rpm
-!swiftinstall/
+!appinstall/

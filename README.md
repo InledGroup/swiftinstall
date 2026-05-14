@@ -1,5 +1,5 @@
-![Banner SwiftInstall](/corp/SwiftInstall%20banner.png)
-# SwiftInstall
+![Banner AppInstall](/corp/AppInstall%20banner.png)
+# AppInstall
 
 Instala y desinstala aplicaciones fuera de la Store en Linux de forma gráfica.
 
@@ -18,7 +18,7 @@ Y ya estaría instalada la aplicación.
 
 Y ya estaría desinstalada la aplicación.
 
-## Empezar a usar SwiftInstall
+## Empezar a usar AppInstall
 1. **Descarga** la aplicación en .deb
 2. Ejecuta `dpkg -i [nombre del paquete.deb]`
 3. [Instala Python en tu dispositivo](https://python-guide-es.readthedocs.io/es/latest/starting/install3/linux.html).

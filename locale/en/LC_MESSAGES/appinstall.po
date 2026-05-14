@@ -416,8 +416,8 @@ msgid "Desinstalación completada"
 msgstr "Uninstallation completed"
 
 #: start.py:1831
-msgid "Error al desinstalar Swiftinstall Enhance AppImage - {}."
-msgstr "Error uninstalling Swiftinstall Enhance AppImage - {}."
+msgid "Error al desinstalar Appinstall Enhance AppImage - {}."
+msgstr "Error uninstalling Appinstall Enhance AppImage - {}."
 
 #: start.py:1833
 msgid "Error al desinstalar {}."
@@ -440,8 +440,8 @@ msgid "Menú"
 msgstr "Menu"
 
 #: start.py:1878
-msgid "Acerca de Swift Install"
-msgstr "About Swift Install"
+msgid "Acerca de App Install"
+msgstr "About App Install"
 
 #: start.py:1882
 msgid "Reportar un error"
@@ -522,8 +522,8 @@ msgid "Instalando..."
 msgstr "Installing..."
 
 #: start.py:2237
-msgid "Formato de paquete no soportado por Swift Install"
-msgstr "Package format not supported by Swift Install"
+msgid "Formato de paquete no soportado por App Install"
+msgstr "Package format not supported by App Install"
 
 #: start.py:2253
 msgid "Corrigiendo errores"
@@ -625,9 +625,6 @@ msgstr "Creating PWA..."
 msgid "¡Web App creada correctamente! Ya la tienes disponible en tu menú."
 msgstr "Web App created successfully! It's now available in your menu."
 
-msgid "AppImage instalado como {}. Se ha creado un acceso directo."
-msgstr "AppImage installed as {. A shortcut has been created."
-
 msgid "¿Deseas desinstalar {}? (Web App)"
 msgstr "Do you want to uninstall {}? (Web App)"
 
@@ -636,3 +633,6 @@ msgstr "The Web App {} has been successfully removed."
 
 msgid "Error al eliminar la Web App {}."
 msgstr "Error removing the Web App {}."
+
+msgid "Instalador de paquetes gráfico para Linux."
+msgstr "Graphical package installer for Linux."

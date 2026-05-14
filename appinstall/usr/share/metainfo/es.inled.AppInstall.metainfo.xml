@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>es.inled.SwiftInstall</id>
+  <id>es.inled.AppInstall</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
-  <name>Swift Install</name>
+  <name>App Install</name>
   <summary>Un gestor de paquetes visual con utilidades de limpieza y análisis antivirus</summary>
   <description>
     <p>
-      Con Swiftinstall no tendrás que volver a usar la terminal para gestionar aplicaciones. Instala ficheros .deb, .rpm y .appimage de forma 100% visual. Desinstala aplicaciones de forma visual, hayan sido instaladas por la store o manualmente. Limpia el ordenador de archivos basura y realiza un análisis antivirus
+      Con Appinstall no tendrás que volver a usar la terminal para gestionar aplicaciones. Instala ficheros .deb, .rpm y .appimage de forma 100% visual. Desinstala aplicaciones de forma visual, hayan sido instaladas por la store o manualmente. Limpia el ordenador de archivos basura y realiza un análisis antivirus
     </p>
     <p>
-     Swiftinstall está diseñado para tí:
+     Appinstall está diseñado para tí:
     </p>
     <ul>
       <li>📦 Soporte de paquetes .deb, .rpm y .appimage</li>
@@ -19,17 +19,17 @@
       <li>😀La aplicación se comporta como un amigo, un asistente personal alegre</li>
     </ul>
     <p>
-      Swiftinstall ofrece más funciones que Gdebi al permitir, por ejemplo, el análisis antivirus y la limpieza de ficheros basura así como la desisntalación de cualquier paquete instalado en el sistema.
+      Appinstall ofrece más funciones que Gdebi al permitir, por ejemplo, el análisis antivirus y la limpieza de ficheros basura así como la desisntalación de cualquier paquete instalado en el sistema.
     </p>
 
     
   </description>
-  <url type="homepage">https://github.com/inled-group/swiftinstall</url>
-  <url type="bugtracker">https://github.com/inled-group/swiftinstall/issues</url>
+  <url type="homepage">https://github.com/inled-group/appinstall</url>
+  <url type="bugtracker">https://github.com/inled-group/appinstall/issues</url>
   <developer_name>Inled Group</developer_name>
-  <launchable type="desktop-id">es.inled.SwiftInstall.desktop</launchable>
+  <launchable type="desktop-id">es.inled.AppInstall.desktop</launchable>
   <provides>
-    <binary>swiftinstall</binary>
+    <binary>appinstall</binary>
   </provides>
   <releases>
     <release version="8.0" date="2025-08-17">

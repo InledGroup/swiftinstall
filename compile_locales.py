@@ -1,0 +1,21 @@
+import polib
+import os
+
+def compile_po(po_file, mo_file):
+    po = polib.pofile(po_file)
+    po.save_as_mofile(mo_file)
+
+if __name__ == "__main__":
+    po_path = 'locale/en/LC_MESSAGES/appinstall.po'
+    mo_path = 'locale/en/LC_MESSAGES/appinstall.mo'
+    if os.path.exists(po_path):
+        print(f"Compiling {po_path} to {mo_path}...")
+        compile_po(po_path, mo_path)
+        # Also copy to the appinstall structure
+        dest_mo = 'appinstall/usr/share/locale/en/LC_MESSAGES/appinstall.mo'
+        os.makedirs(os.path.dirname(dest_mo), exist_ok=True)
+        import shutil
+        shutil.copy(mo_path, dest_mo)
+        print("Done.")
+    else:
+        print(f"File {po_path} not found.")

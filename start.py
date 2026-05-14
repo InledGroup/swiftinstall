@@ -13,8 +13,8 @@ import shutil
 from packaging import version
 
 # Versión actual de la aplicación
-CURRENT_VERSION = "10.0"  # Esto se cambia según haya una nueva release
-GITHUB_REPO = "InledGroup/swiftinstall"
+CURRENT_VERSION = "11.0"  # Esto se cambia según haya una nueva release
+GITHUB_REPO = "InledGroup/appinstall"
 
 import locale
 import gettext
@@ -31,8 +31,8 @@ try:
 except:
     pass
 
-gettext.bindtextdomain('swiftinstall', LOCALE_DIR)
-gettext.textdomain('swiftinstall')
+gettext.bindtextdomain('appinstall', LOCALE_DIR)
+gettext.textdomain('appinstall')
 _ = gettext.gettext
 
 class PackageManager:
@@ -118,18 +118,41 @@ class DnfManager(PackageManager):
     def search(self, query):
         results = []
         try:
-            output = subprocess.check_output(['dnf', 'search', query], timeout=15).decode('utf-8')
-            # dnf search output: "Name : Summary"
+            # Aumentamos el timeout a 30s ya que dnf puede ser muy lento refrescando caché
+            # Usamos --quiet para evitar ruidos de metadatos en la salida
+            output = subprocess.check_output(['dnf', 'search', '--quiet', query], timeout=30).decode('utf-8', errors='ignore')
+            
+            # dnf search puede tener formatos distintos según versión (DNF 4 vs DNF 5)
             for line in output.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                    
+                # Formato clásico DNF 4: "Name : Summary"
                 if ' : ' in line:
                     parts = line.split(' : ', 1)
                     name = parts[0].strip()
-                    # Remove architecture if present (e.g. name.x86_64)
-                    if '.' in name and name.split('.')[-1] in ['x86_64', 'i686', 'noarch', 'armv7hl', 'aarch64']:
-                        name = '.'.join(name.split('.')[:-1])
+                    
+                    # Limpiar arquitectura si está presente (e.g. name.x86_64)
+                    archs = ('.x86_64', '.i686', '.noarch', '.armv7hl', '.aarch64', '.ppc64le', '.s390x')
+                    for arch in archs:
+                        if name.endswith(arch):
+                            name = name[:-len(arch)]
+                            break
+                            
                     desc = parts[1].strip()
                     results.append({'name': name, 'desc': desc, 'source': 'dnf'})
-        except:
+                
+                # Formato tabular DNF 5: "ID | Summary"
+                elif '|' in line and not line.startswith('---'):
+                    parts = line.split('|', 1)
+                    name = parts[0].strip()
+                    desc = parts[1].strip()
+                    # Ignorar cabeceras
+                    if name.lower() not in ('id', 'nombre', 'name'):
+                        results.append({'name': name, 'desc': desc, 'source': 'dnf'})
+        except Exception as e:
+            print(f"Error en dnf search: {e}")
             pass
         return results
 
@@ -334,7 +357,7 @@ def check_for_updates():
     """Comprueba las actualizaciones conectando con la API de GitHub con mejor manejo de errores."""
     try:
         # Add a user agent to avoid GitHub API rate limiting
-        headers = {'User-Agent': f'SwiftInstall/{CURRENT_VERSION}'}
+        headers = {'User-Agent': f'AppInstall/{CURRENT_VERSION}'}
         
         # Add timeout and better error handling
         response = requests.get(
@@ -1780,20 +1803,20 @@ class InstalledAppsWindow(Adw.Window):
                                 content = f.read()
                                 app_name = filename.replace(".desktop", "")
 
-                                # Detectar si es de SwiftInstall:
+                                # Detectar si es de AppInstall:
                                 # 1. Tiene la marca nueva (AppImage o PWA)
                                 # 2. Tiene el icono por defecto antiguo
-                                # 3. Tiene el patrón de ruta de binario e icono personalizado de SwiftInstall
-                                if "X-SwiftInstall=PWA" in content:
+                                # 3. Tiene el patrón de ruta de binario e icono personalizado de AppInstall
+                                if "X-AppInstall=PWA" in content:
                                     pwas.append(app_name)
                                 else:
-                                    is_swift_app = (
-                                        "X-SwiftInstall=AppImage" in content or 
+                                    is_appinstall_app = (
+                                        "X-AppInstall=AppImage" in content or 
                                         ("/usr/bin/" in content and "appimage.png" in content) or
                                         (f"Exec=/usr/bin/{app_name}" in content and f"Icon=/usr/share/pixmaps/{app_name}" in content)
                                     )
 
-                                    if is_swift_app:
+                                    if is_appinstall_app:
                                         appimages.append(app_name)
                         except:
                             pass
@@ -1857,7 +1880,7 @@ class InstalledAppsWindow(Adw.Window):
             icon = Gtk.Image.new_from_icon_name("web-browser-symbolic")
         elif is_brew:
             # Intentar cargar el logo de Homebrew
-            brew_logo_path = os.path.expanduser("~/.cache/swiftinstall/homebrew_logo.png")
+            brew_logo_path = os.path.expanduser("~/.cache/appinstall/homebrew_logo.png")
             if not os.path.exists(brew_logo_path):
                 # Descargar el logo si no existe
                 try:
@@ -2301,7 +2324,7 @@ class PWAConfigWindow(Adw.Window):
             domain = urlparse(url).netloc
             favicon_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
             
-            icon_temp_path = os.path.join(os.path.expanduser("~/.cache/swiftinstall"), f"pwa_{domain}.png")
+            icon_temp_path = os.path.join(os.path.expanduser("~/.cache/appinstall"), f"pwa_{domain}.png")
             os.makedirs(os.path.dirname(icon_temp_path), exist_ok=True)
             
             icon_response = requests.get(favicon_url, timeout=10)
@@ -2377,7 +2400,7 @@ class AppImageConfigWindow(Adw.Window):
         filename = os.path.basename(file_path)
         self.default_name = os.path.splitext(filename)[0]
         
-        # Icono por defecto de Swift Install
+        # Icono por defecto de App Install
         self.icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "appimage.png")
 
         # Header bar al estilo GNOME
@@ -2510,7 +2533,25 @@ class AppImageConfigWindow(Adw.Window):
 class PackageInstaller(Adw.ApplicationWindow):
     def __init__(self, app, file_to_open=None):
         super().__init__(application=app)
-        self.set_title("Swift Install")
+        self.set_title("App Install")
+        
+        # Intentar cargar el icono de la aplicación
+        icon_name = "es.inled.AppInstall"
+        
+        # Si estamos ejecutando localmente, intentar añadir el path local al IconTheme
+        local_dir = os.path.dirname(os.path.abspath(__file__))
+        local_icon = os.path.join(local_dir, f"{icon_name}.png")
+        if os.path.exists(local_icon):
+            try:
+                display = Gdk.Display.get_default()
+                if display:
+                    theme = Gtk.IconTheme.get_for_display(display)
+                    theme.add_search_path(local_dir)
+            except Exception as e:
+                print(f"Error cargando ruta de icono local: {e}")
+        
+        self.set_icon_name(icon_name)
+
         # Ajustar tamaño de ventana principal a la pantalla
         width, height = get_safe_window_size(600, 500, 0.9)
         self.set_default_size(width, height)
@@ -2518,7 +2559,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         
         # Header bar al estilo GNOME
         header_bar = Adw.HeaderBar()
-        title_widget = Adw.WindowTitle(title="Swift Install", subtitle=_("Versión {}").format(CURRENT_VERSION))
+        title_widget = Adw.WindowTitle(title="App Install", subtitle=_("Versión {}").format(CURRENT_VERSION))
         header_bar.set_title_widget(title_widget)
         header_bar.add_css_class("header-bar")
         
@@ -2537,7 +2578,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         popover_box.set_margin_end(10)
         
         # Elementos del menú
-        about_button = Gtk.Button(label=_("Acerca de Swift Install"))
+        about_button = Gtk.Button(label=_("Acerca de App Install"))
         about_button.connect("clicked", self.on_about_clicked)
         popover_box.append(about_button)
         
@@ -2863,7 +2904,7 @@ Exec=/usr/bin/{app_name}
 Icon={target_icon_path}
 Terminal=false
 Categories=Utility;
-X-SwiftInstall=AppImage
+X-AppInstall=AppImage
 """
         # Escapar comillas simples para el comando echo
         escaped_content = desktop_content.replace("'", "'\\''")
@@ -3005,7 +3046,7 @@ X-SwiftInstall=AppImage
             extract_dir = os.path.expanduser('~/.local')
             cmd = ['tar', '-xvf', self.file_path, '-C', extract_dir]
         else:
-            self.status_label.set_text(_("Formato de paquete no soportado por Swift Install"))
+            self.status_label.set_text(_("Formato de paquete no soportado por App Install"))
             self.install_button.set_sensitive(True)
             self.fix_deps_button.set_sensitive(True)
             self.apps_button.set_sensitive(True)
@@ -3097,7 +3138,7 @@ Exec={exec_cmd}
 Icon={target_icon_path}
 Terminal=false
 Categories=Network;WebBrowser;
-X-SwiftInstall=PWA
+X-AppInstall=PWA
 """
         escaped_content = desktop_content.replace("'", "'\\''")
         desktop_path = f"/usr/share/applications/{app_name}.desktop"
@@ -3525,7 +3566,7 @@ X-SwiftInstall=PWA
         thread.start()
 
     def on_report_issue(self, widget):
-        safe_open_url("https://github.com/Inled-Group/swiftinstall/issues")
+        safe_open_url("https://github.com/Inled-Group/appinstall/issues")
     
     def open_inled_es(self, widget):
         safe_open_url("https://inled.es")
@@ -3656,8 +3697,8 @@ X-SwiftInstall=PWA
         about_dialog = Adw.AboutWindow(
             transient_for=self,
             modal=True,
-            application_name="Swift Install",
-            application_icon="es.inled.SwiftInstall",
+            application_name="App Install",
+            application_icon="es.inled.AppInstall",
             version=CURRENT_VERSION,
             comments=_("Instalador de paquetes gráfico para Linux."),
             copyright="© 2026 Inled Group",
@@ -3729,9 +3770,9 @@ def show_dependencies_dialog(parent_window, missing_deps):
     
     return False  # Indicar que faltan dependencias
 
-class SwiftInstallApp(Adw.Application):
+class AppInstallApp(Adw.Application):
     def __init__(self):
-        super().__init__(application_id="com.inled.swiftinstall", flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
+        super().__init__(application_id="com.inled.appinstall", flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
         self.connect("activate", self.on_activate)
         self.connect("command-line", self.on_command_line)
         self.file_to_open = None
@@ -3766,7 +3807,7 @@ class SwiftInstallApp(Adw.Application):
         win.present()
 
 def Component():
-    app = SwiftInstallApp()
+    app = AppInstallApp()
     return app.run(sys.argv)
 
 if __name__ == "__main__":
@@ -3774,9 +3815,9 @@ if __name__ == "__main__":
         Component()
     except Exception as e:
         import traceback
-        error_log = os.path.expanduser("~/.cache/swiftinstall_error.log")
+        error_log = os.path.expanduser("~/.cache/appinstall_error.log")
         with open(error_log, "w") as f:
-            f.write(f"Error starting SwiftInstall: {str(e)}\n")
+            f.write(f"Error starting AppInstall: {str(e)}\n")
             traceback.print_exc(file=f)
         # Intentar mostrar dialogo de error con zenity si es posible, o print
         print(f"Critical error: {e}", file=sys.stderr)

@@ -13,8 +13,8 @@ import shutil
 from packaging import version
 
 # Versión actual de la aplicación
-CURRENT_VERSION = "10.0"  # Esto se cambia según haya una nueva release
-GITHUB_REPO = "InledGroup/swiftinstall"
+CURRENT_VERSION = "11.0"  # Esto se cambia según haya una nueva release
+GITHUB_REPO = "InledGroup/appinstall"
 
 import locale
 import gettext
@@ -31,9 +31,194 @@ try:
 except:
     pass
 
-gettext.bindtextdomain('swiftinstall', LOCALE_DIR)
-gettext.textdomain('swiftinstall')
+gettext.bindtextdomain('appinstall', LOCALE_DIR)
+gettext.textdomain('appinstall')
 _ = gettext.gettext
+
+class PackageManager:
+    def search(self, query):
+        raise NotImplementedError()
+    def list_installed(self):
+        raise NotImplementedError()
+    def install(self, package):
+        raise NotImplementedError()
+    def install_multiple(self, packages):
+        raise NotImplementedError()
+    def install_local(self, file_path):
+        raise NotImplementedError()
+    def uninstall(self, package):
+        raise NotImplementedError()
+    def update_cache(self):
+        raise NotImplementedError()
+    def clean_cache(self):
+        raise NotImplementedError()
+    def autoremove(self):
+        raise NotImplementedError()
+    def fix_broken(self):
+        raise NotImplementedError()
+    def get_cache_directory(self):
+        raise NotImplementedError()
+    def install_clamav(self):
+        raise NotImplementedError()
+
+class AptManager(PackageManager):
+    def search(self, query):
+        results = []
+        try:
+            output = subprocess.check_output(['apt-cache', 'search', query], timeout=10).decode('utf-8')
+            for line in output.split('\n'):
+                if line.strip():
+                    parts = line.split(' - ', 1)
+                    name = parts[0].strip()
+                    desc = parts[1].strip() if len(parts) > 1 else ""
+                    results.append({'name': name, 'desc': desc, 'source': 'apt'})
+        except:
+            pass
+        return results
+
+    def list_installed(self):
+        try:
+            output = subprocess.check_output(['dpkg', '--get-selections'], timeout=15).decode('utf-8')
+            return [line.split()[0] for line in output.split('\n') 
+                    if line.strip() and len(line.split()) > 1 and line.split()[1] == 'install']
+        except:
+            return []
+
+    def install(self, package):
+        return ['pkexec', 'apt-get', 'install', '-y', package]
+
+    def install_multiple(self, packages):
+        return ['pkexec', 'apt-get', 'install', '-y'] + packages
+
+    def install_local(self, file_path):
+        return ['pkexec', 'dpkg', '-i', file_path]
+
+    def uninstall(self, package):
+        return ['pkexec', 'apt-get', 'remove', '-y', package]
+
+    def update_cache(self):
+        return ['pkexec', 'apt-get', 'update']
+
+    def clean_cache(self):
+        return ['pkexec', 'apt-get', 'clean']
+
+    def autoremove(self):
+        return ['pkexec', 'apt-get', 'autoremove', '-y']
+
+    def fix_broken(self):
+        return ['pkexec', 'apt-get', 'install', '-f', '-y']
+
+    def get_cache_directory(self):
+        return "/var/cache/apt/archives"
+
+    def install_clamav(self):
+        return ['pkexec', 'apt-get', 'install', '-y', 'clamav', 'clamav-daemon', 'clamav-freshclam']
+
+class DnfManager(PackageManager):
+    def search(self, query):
+        results = []
+        try:
+            # Aumentamos el timeout a 30s ya que dnf puede ser muy lento refrescando caché
+            # Usamos --quiet para evitar ruidos de metadatos en la salida
+            output = subprocess.check_output(['dnf', 'search', '--quiet', query], timeout=30).decode('utf-8', errors='ignore')
+            
+            # dnf search puede tener formatos distintos según versión (DNF 4 vs DNF 5)
+            for line in output.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                    
+                # Formato clásico DNF 4: "Name : Summary"
+                if ' : ' in line:
+                    parts = line.split(' : ', 1)
+                    name = parts[0].strip()
+                    
+                    # Limpiar arquitectura si está presente (e.g. name.x86_64)
+                    archs = ('.x86_64', '.i686', '.noarch', '.armv7hl', '.aarch64', '.ppc64le', '.s390x')
+                    for arch in archs:
+                        if name.endswith(arch):
+                            name = name[:-len(arch)]
+                            break
+                            
+                    desc = parts[1].strip()
+                    results.append({'name': name, 'desc': desc, 'source': 'dnf'})
+                
+                # Formato tabular DNF 5: "ID | Summary"
+                elif '|' in line and not line.startswith('---'):
+                    parts = line.split('|', 1)
+                    name = parts[0].strip()
+                    desc = parts[1].strip()
+                    # Ignorar cabeceras
+                    if name.lower() not in ('id', 'nombre', 'name'):
+                        results.append({'name': name, 'desc': desc, 'source': 'dnf'})
+        except Exception as e:
+            print(f"Error en dnf search: {e}")
+            pass
+        return results
+
+    def list_installed(self):
+        try:
+            output = subprocess.check_output(['rpm', '-qa', '--qf', '%{NAME}\\n'], timeout=15).decode('utf-8')
+            return [line.strip() for line in output.split('\n') if line.strip()]
+        except:
+            return []
+
+    def install(self, package):
+        return ['pkexec', 'dnf', 'install', '-y', package]
+
+    def install_multiple(self, packages):
+        return ['pkexec', 'dnf', 'install', '-y'] + packages
+
+    def install_local(self, file_path):
+        return ['pkexec', 'dnf', 'install', '-y', file_path]
+
+    def uninstall(self, package):
+        return ['pkexec', 'dnf', 'remove', '-y', package]
+
+    def update_cache(self):
+        return ['pkexec', 'dnf', 'makecache']
+
+    def clean_cache(self):
+        return ['pkexec', 'dnf', 'clean', 'all']
+
+    def autoremove(self):
+        return ['pkexec', 'dnf', 'autoremove', '-y']
+
+    def fix_broken(self):
+        # dnf doesn't have a direct equivalent to apt install -f, but it handles deps better
+        return ['pkexec', 'dnf', 'check']
+
+    def get_cache_directory(self):
+        return "/var/cache/dnf"
+
+    def install_clamav(self):
+        return ['pkexec', 'dnf', 'install', '-y', 'clamav', 'clamav-update', 'clamd']
+
+def get_brew_path():
+    """Busca la ruta de Homebrew de forma más robusta."""
+    common_paths = [
+        '/home/linuxbrew/.linuxbrew/bin/brew',
+        '/usr/local/bin/brew',
+        '/opt/homebrew/bin/brew'
+    ]
+    for path in common_paths:
+        if os.path.exists(path):
+            return path
+    return shutil.which('brew')
+
+BREW_PATH = get_brew_path()
+HAS_BREW = BREW_PATH is not None
+
+def get_package_manager():
+    if shutil.which('dnf'):
+        return DnfManager()
+    elif shutil.which('yum'):
+        # Could create a YumManager but DnfManager is usually compatible enough
+        return DnfManager()
+    else:
+        return AptManager()
+
+pkg_manager = get_package_manager()
 
 # Aplicar CSS para un estilo GNOME moderno
 def load_css():
@@ -172,7 +357,7 @@ def check_for_updates():
     """Comprueba las actualizaciones conectando con la API de GitHub con mejor manejo de errores."""
     try:
         # Add a user agent to avoid GitHub API rate limiting
-        headers = {'User-Agent': f'SwiftInstall/{CURRENT_VERSION}'}
+        headers = {'User-Agent': f'AppInstall/{CURRENT_VERSION}'}
         
         # Add timeout and better error handling
         response = requests.get(
@@ -350,23 +535,23 @@ class SystemCleanupWindow(Adw.Window):
         orphan_box.append(orphan_info)
         advanced_section.append(orphan_box)
 
-        # Checkbox para limpiar caché de apt
-        apt_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        # Checkbox para limpiar caché de paquetes
+        pkg_cache_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         self.apt_check = Gtk.CheckButton()
         self.apt_check.set_active(True)
-        apt_box.prepend(self.apt_check)
+        pkg_cache_box.prepend(self.apt_check)
         
-        apt_info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        apt_label = Gtk.Label(label=_("Limpiar caché de APT"), xalign=0)
-        apt_label.add_css_class("title-label")
-        apt_info.append(apt_label)
+        pkg_cache_info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        pkg_cache_label = Gtk.Label(label=_("Limpiar caché de paquetes"), xalign=0)
+        pkg_cache_label.add_css_class("title-label")
+        pkg_cache_info.append(pkg_cache_label)
         
-        apt_desc = Gtk.Label(label=_("Archivos .deb descargados"), xalign=0)
-        apt_desc.add_css_class("subtitle-label")
-        apt_info.append(apt_desc)
+        pkg_cache_desc = Gtk.Label(label=_("Archivos de instalación descargados"), xalign=0)
+        pkg_cache_desc.add_css_class("subtitle-label")
+        pkg_cache_info.append(pkg_cache_desc)
         
-        apt_box.append(apt_info)
-        advanced_section.append(apt_box)
+        pkg_cache_box.append(pkg_cache_info)
+        advanced_section.append(pkg_cache_box)
 
         main_box.append(advanced_section)
 
@@ -451,12 +636,12 @@ class SystemCleanupWindow(Adw.Window):
                 self.analysis_results["paquetes_huerfanos"] = orphan_size
                 self.total_size += orphan_size
             
-            # Analizar caché de APT si está seleccionado
+            # Analizar caché de paquetes si está seleccionado
             if self.apt_check.get_active():
                 GLib.idle_add(self.update_progress, 0.9)
-                apt_size = self.get_apt_cache_size()
-                self.analysis_results["apt_cache"] = apt_size
-                self.total_size += apt_size
+                pkg_cache_size = self.get_package_cache_size()
+                self.analysis_results["package_cache"] = pkg_cache_size
+                self.total_size += pkg_cache_size
             
             GLib.idle_add(self.analysis_complete)
             
@@ -506,17 +691,15 @@ class SystemCleanupWindow(Adw.Window):
     def get_orphan_packages_size(self):
         """Estima el tamaño de los paquetes huérfanos."""
         try:
-            result = subprocess.run(['apt', 'list', '--installed'], 
-                                  capture_output=True, text=True, timeout=30)
-            # Estimación aproximada basada en número de paquetes
-            package_count = len(result.stdout.split('\n'))
-            return package_count * 1024 * 1024  # 1MB promedio por paquete huérfano estimado
+            # Usar pkg_manager para obtener la lista de paquetes
+            packages = pkg_manager.list_installed()
+            return len(packages) * 1024 * 1024  # 1MB promedio estimado
         except:
             return 0
 
-    def get_apt_cache_size(self):
-        """Calcula el tamaño del caché de APT."""
-        return self._calculate_dir_size("/var/cache/apt/archives")
+    def get_package_cache_size(self):
+        """Calcula el tamaño del caché de paquetes."""
+        return self._calculate_dir_size(pkg_manager.get_cache_directory())
 
     def update_progress(self, fraction):
         """Actualiza la barra de progreso."""
@@ -607,10 +790,10 @@ class SystemCleanupWindow(Adw.Window):
                 self.clean_orphan_packages()
                 current_op += 1
             
-            # Limpiar caché de APT
+            # Limpiar caché de paquetes
             if self.apt_check.get_active():
                 GLib.idle_add(self.update_progress, current_op / total_operations)
-                self.clean_apt_cache()
+                self.clean_package_cache()
                 current_op += 1
             
             GLib.idle_add(self.cleanup_complete, cleaned_size)
@@ -674,18 +857,18 @@ class SystemCleanupWindow(Adw.Window):
     def clean_orphan_packages(self):
         """Limpia paquetes huérfanos."""
         try:
-            subprocess.run(['pkexec', 'apt-get', 'autoremove', '-y'], 
+            subprocess.run(pkg_manager.autoremove(), 
                          timeout=300, capture_output=True)
         except Exception as e:
             print(f"Error limpiando paquetes huérfanos: {e}")
 
-    def clean_apt_cache(self):
-        """Limpia el caché de APT."""
+    def clean_package_cache(self):
+        """Limpia el caché de paquetes."""
         try:
-            subprocess.run(['pkexec', 'apt-get', 'clean'], 
+            subprocess.run(pkg_manager.clean_cache(), 
                          timeout=300, capture_output=True)
         except Exception as e:
-            print(f"Error limpiando caché APT: {e}")
+            print(f"Error limpiando caché de paquetes: {e}")
 
     def cleanup_complete(self, cleaned_size):
         """Se ejecuta cuando la limpieza está completa."""
@@ -1114,7 +1297,7 @@ class AntivirusWindow(Adw.Window):
         try:
             # Primero intentar corregir dependencias rotas
             GLib.idle_add(self.update_status_clam, "Corrigiendo dependencias...")
-            fix_process = subprocess.Popen(['pkexec', 'apt-get', '--fix-broken', 'install', '-y'],
+            fix_process = subprocess.Popen(pkg_manager.fix_broken(),
                                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
             
             while True:
@@ -1128,13 +1311,13 @@ class AntivirusWindow(Adw.Window):
             
             # Actualizar repositorios
             GLib.idle_add(self.update_status_clam, "Actualizando repositorios...")
-            update_process = subprocess.Popen(['pkexec', 'apt-get', 'update'],
+            update_process = subprocess.Popen(pkg_manager.update_cache(),
                                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
             update_process.communicate()
             
             # Instalar ClamAV
             GLib.idle_add(self.update_status_clam, "Instalando ClamAV...")
-            install_process = subprocess.Popen(['pkexec', 'apt-get', 'install', '-y', 'clamav', 'clamav-daemon', 'clamav-freshclam'],
+            install_process = subprocess.Popen(pkg_manager.install_clamav(),
                                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
             
             while True:
@@ -1153,11 +1336,12 @@ class AntivirusWindow(Adw.Window):
                 GLib.idle_add(self.update_status_clam, "Reintentando instalación...")
                 
                 # Limpiar paquetes huérfanos
-                subprocess.run(['pkexec', 'apt-get', 'autoremove', '-y'], 
+                subprocess.run(pkg_manager.autoremove(), 
                              capture_output=True, timeout=120)
                 
                 # Intentar instalar de nuevo
-                retry_process = subprocess.Popen(['pkexec', 'apt-get', 'install', '-y', '--fix-missing', 'clamav', 'clamav-daemon', 'clamav-freshclam'],
+                # Note: install_clamav() doesn't have --fix-missing, but it's a good fallback
+                retry_process = subprocess.Popen(pkg_manager.install_clamav(),
                                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
                 
                 while True:
@@ -1580,28 +1764,32 @@ class InstalledAppsWindow(Adw.Window):
             appimages = []
             brew_packages = []
             
-            # Obtener paquetes del sistema (APT)
+            # Obtener paquetes del sistema
             try:
-                output = subprocess.check_output(['dpkg', '--get-selections'], 
-                                               timeout=10).decode('utf-8')
-                packages = [line.split()[0] for line in output.split('\n') 
-                           if line.strip() and len(line.split()) > 1 and line.split()[1] == 'install']
-            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+                packages = pkg_manager.list_installed()
+            except Exception as e:
                 print(f"Error al obtener paquetes: {e}")
             
             # Obtener paquetes de Homebrew
-            if shutil.which('brew'):
+            if HAS_BREW:
+                print(f"DEBUG: Intentando listar paquetes de Homebrew usando {BREW_PATH}")
                 try:
                     # Listar fórmulas y casks
-                    output = subprocess.check_output(['brew', 'list', '--formula'], 
-                                                   timeout=15).decode('utf-8')
-                    brew_packages.extend([line.strip() for line in output.split('\n') if line.strip()])
+                    output = subprocess.check_output([BREW_PATH, 'list', '--formula'], 
+                                                   timeout=15, stderr=subprocess.STDOUT).decode('utf-8')
+                    formulas = [line.strip() for line in output.split('\n') if line.strip()]
+                    brew_packages.extend(formulas)
+                    print(f"DEBUG: Encontradas {len(formulas)} fórmulas de Homebrew")
                     
-                    output_cask = subprocess.check_output(['brew', 'list', '--cask'], 
-                                                        timeout=15).decode('utf-8')
-                    brew_packages.extend([line.strip() for line in output_cask.split('\n') if line.strip()])
+                    output_cask = subprocess.check_output([BREW_PATH, 'list', '--cask'], 
+                                                        timeout=15, stderr=subprocess.STDOUT).decode('utf-8')
+                    casks = [line.strip() for line in output_cask.split('\n') if line.strip()]
+                    brew_packages.extend(casks)
+                    print(f"DEBUG: Encontrados {len(casks)} casks de Homebrew")
                 except Exception as e:
-                    print(f"Error al obtener paquetes de Homebrew: {e}")
+                    print(f"DEBUG: Error al obtener paquetes de Homebrew: {e}")
+            else:
+                print("DEBUG: Homebrew no detectado (HAS_BREW es False)")
 
             # Obtener AppImages y PWAs
             pwas = []
@@ -1615,32 +1803,32 @@ class InstalledAppsWindow(Adw.Window):
                                 content = f.read()
                                 app_name = filename.replace(".desktop", "")
 
-                                # Detectar si es de SwiftInstall:
+                                # Detectar si es de AppInstall:
                                 # 1. Tiene la marca nueva (AppImage o PWA)
                                 # 2. Tiene el icono por defecto antiguo
-                                # 3. Tiene el patrón de ruta de binario e icono personalizado de SwiftInstall
-                                if "X-SwiftInstall=PWA" in content:
+                                # 3. Tiene el patrón de ruta de binario e icono personalizado de AppInstall
+                                if "X-AppInstall=PWA" in content:
                                     pwas.append(app_name)
                                 else:
-                                    is_swift_app = (
-                                        "X-SwiftInstall=AppImage" in content or 
+                                    is_appinstall_app = (
+                                        "X-AppInstall=AppImage" in content or 
                                         ("/usr/bin/" in content and "appimage.png" in content) or
                                         (f"Exec=/usr/bin/{app_name}" in content and f"Icon=/usr/share/pixmaps/{app_name}" in content)
                                     )
 
-                                    if is_swift_app:
+                                    if is_appinstall_app:
                                         appimages.append(app_name)
                         except:
                             pass
             
             # Actualizar la UI en lotes para evitar sobrecargar el bucle principal
             def update_ui_batch(index):
-                # Combinar todas las aplicaciones para el listado (APT primero, luego Brew, luego AppImage, luego PWA)
+                # Priorizar: PWA -> AppImage -> Homebrew -> Sistema (APT/DNF)
                 all_apps = []
-                for p in packages: all_apps.append((p, "apt"))
-                for b in brew_packages: all_apps.append((b, "brew"))
-                for a in appimages: all_apps.append((a, "appimage"))
                 for pw in pwas: all_apps.append((pw, "pwa"))
+                for a in appimages: all_apps.append((a, "appimage"))
+                for b in brew_packages: all_apps.append((b, "brew"))
+                for p in packages: all_apps.append((p, "system"))
 
                 if not all_apps:
                     self.stack.set_visible_child_name("empty")
@@ -1692,7 +1880,7 @@ class InstalledAppsWindow(Adw.Window):
             icon = Gtk.Image.new_from_icon_name("web-browser-symbolic")
         elif is_brew:
             # Intentar cargar el logo de Homebrew
-            brew_logo_path = os.path.expanduser("~/.cache/swiftinstall/homebrew_logo.png")
+            brew_logo_path = os.path.expanduser("~/.cache/appinstall/homebrew_logo.png")
             if not os.path.exists(brew_logo_path):
                 # Descargar el logo si no existe
                 try:
@@ -1733,7 +1921,7 @@ class InstalledAppsWindow(Adw.Window):
         elif is_brew:
             type_text = _("Paquete Homebrew")
         else:
-            type_text = _("Paquete instalado")
+            type_text = _("Paquete del sistema")
             
         type_label = Gtk.Label(label=type_text, xalign=0)
         type_label.add_css_class("subtitle-label")
@@ -1897,13 +2085,10 @@ class InstalledAppsWindow(Adw.Window):
             ]
         elif is_brew:
             # Desinstalar con brew
-            cmd = ['brew', 'uninstall', package_name]
-        elif shutil.which('dnf'):
-            # Desinstalar con dnf si está disponible
-            cmd = ['pkexec', 'dnf', 'remove', '-y', package_name]
+            cmd = [BREW_PATH, 'uninstall', package_name]
         else:
-            # Eliminar un paquete normal (APT)
-            cmd = ['pkexec', 'apt-get', 'remove', '-y', package_name]
+            # Eliminar un paquete normal usando el gestor del sistema
+            cmd = pkg_manager.uninstall(package_name)
 
         thread = threading.Thread(target=self.run_uninstall, args=(cmd, package_name, is_appimage, is_brew, is_pwa))
 
@@ -2139,7 +2324,7 @@ class PWAConfigWindow(Adw.Window):
             domain = urlparse(url).netloc
             favicon_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
             
-            icon_temp_path = os.path.join(os.path.expanduser("~/.cache/swiftinstall"), f"pwa_{domain}.png")
+            icon_temp_path = os.path.join(os.path.expanduser("~/.cache/appinstall"), f"pwa_{domain}.png")
             os.makedirs(os.path.dirname(icon_temp_path), exist_ok=True)
             
             icon_response = requests.get(favicon_url, timeout=10)
@@ -2215,7 +2400,7 @@ class AppImageConfigWindow(Adw.Window):
         filename = os.path.basename(file_path)
         self.default_name = os.path.splitext(filename)[0]
         
-        # Icono por defecto de Swift Install
+        # Icono por defecto de App Install
         self.icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "appimage.png")
 
         # Header bar al estilo GNOME
@@ -2348,7 +2533,24 @@ class AppImageConfigWindow(Adw.Window):
 class PackageInstaller(Adw.ApplicationWindow):
     def __init__(self, app, file_to_open=None):
         super().__init__(application=app)
-        self.set_title("Swift Install")
+        self.set_title("App Install")
+        
+        # Intentar cargar el icono de la aplicación
+        icon_name = "es.inled.AppInstall"
+        
+        # Si estamos ejecutando localmente, intentar añadir el path local al IconTheme
+        local_icon = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app-icon.png")
+        if os.path.exists(local_icon):
+            try:
+                display = Gdk.Display.get_default()
+                if display:
+                    theme = Gtk.IconTheme.get_for_display(display)
+                    theme.add_search_path(os.path.dirname(local_icon))
+            except Exception as e:
+                print(f"Error cargando ruta de icono local: {e}")
+        
+        self.set_icon_name(icon_name)
+
         # Ajustar tamaño de ventana principal a la pantalla
         width, height = get_safe_window_size(600, 500, 0.9)
         self.set_default_size(width, height)
@@ -2356,7 +2558,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         
         # Header bar al estilo GNOME
         header_bar = Adw.HeaderBar()
-        title_widget = Adw.WindowTitle(title="Swift Install", subtitle=_("Versión {}").format(CURRENT_VERSION))
+        title_widget = Adw.WindowTitle(title="App Install", subtitle=_("Versión {}").format(CURRENT_VERSION))
         header_bar.set_title_widget(title_widget)
         header_bar.add_css_class("header-bar")
         
@@ -2375,7 +2577,7 @@ class PackageInstaller(Adw.ApplicationWindow):
         popover_box.set_margin_end(10)
         
         # Elementos del menú
-        about_button = Gtk.Button(label=_("Acerca de Swift Install"))
+        about_button = Gtk.Button(label=_("Acerca de App Install"))
         about_button.connect("clicked", self.on_about_clicked)
         popover_box.append(about_button)
         
@@ -2420,9 +2622,6 @@ class PackageInstaller(Adw.ApplicationWindow):
         main_box.set_margin_end(24)
         scrolled_main.set_child(main_box)
         
-        # Verificar si brew está instalado
-        self.has_brew = shutil.which('brew') is not None
-
         # Sección de selección de archivo
         file_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
         file_section.add_css_class("card")
@@ -2704,7 +2903,7 @@ Exec=/usr/bin/{app_name}
 Icon={target_icon_path}
 Terminal=false
 Categories=Utility;
-X-SwiftInstall=AppImage
+X-AppInstall=AppImage
 """
         # Escapar comillas simples para el comando echo
         escaped_content = desktop_content.replace("'", "'\\''")
@@ -2822,26 +3021,21 @@ X-SwiftInstall=AppImage
         file_extension = os.path.splitext(self.file_path)[1].lower()
         
         # Detectar si es un paquete de Homebrew
-        is_brew_file = self.has_brew and file_extension == '.rb'
+        is_brew_file = HAS_BREW and file_extension == '.rb'
         is_name_only = not file_extension
 
-        if file_extension == '.deb':
-            cmd = ['pkexec', 'dpkg', '-i', self.file_path]
-        elif file_extension == '.rpm':
-            cmd = ['pkexec', 'rpm', '-i', self.file_path]
+        if file_extension == '.deb' or file_extension == '.rpm':
+            cmd = pkg_manager.install_local(self.file_path)
         elif is_brew_file:
-            cmd = ['brew', 'install', '--formula', self.file_path]
+            cmd = [BREW_PATH, 'install', '--formula', self.file_path]
         elif is_name_only:
             # Si tiene prefijo brew: forzamos brew
             if self.file_path.startswith('brew:'):
                 pkg_name = self.file_path.replace('brew:', '', 1)
-                cmd = ['brew', 'install', pkg_name]
-            elif self.has_brew:
-                # Si no, probamos con apt primero (más común en Linux)
-                # pero permitimos que el usuario elija o simplemente usamos apt
-                cmd = ['pkexec', 'apt-get', 'install', '-y', self.file_path]
+                cmd = [BREW_PATH, 'install', pkg_name]
             else:
-                cmd = ['pkexec', 'apt-get', 'install', '-y', self.file_path]
+                # Usar el gestor de paquetes del sistema
+                cmd = pkg_manager.install(self.file_path)
         elif file_extension == '.appimage':
             # En lugar de instalar directamente, abrimos la ventana de configuración
             config_window = AppImageConfigWindow(self, self.file_path, self.proceed_with_appimage_installation)
@@ -2851,7 +3045,7 @@ X-SwiftInstall=AppImage
             extract_dir = os.path.expanduser('~/.local')
             cmd = ['tar', '-xvf', self.file_path, '-C', extract_dir]
         else:
-            self.status_label.set_text(_("Formato de paquete no soportado por Swift Install"))
+            self.status_label.set_text(_("Formato de paquete no soportado por App Install"))
             self.install_button.set_sensitive(True)
             self.fix_deps_button.set_sensitive(True)
             self.apps_button.set_sensitive(True)
@@ -2870,7 +3064,7 @@ X-SwiftInstall=AppImage
         self.status_label.set_text(_("Corrigiendo errores"))
         self.progress_bar.set_fraction(0.0)
 
-        cmd = ['pkexec', 'apt-get', 'install', '-f', '-y']
+        cmd = pkg_manager.fix_broken()
         thread = threading.Thread(target=self.run_fix_deps, args=(cmd,))
         thread.daemon = True
         thread.start()
@@ -2943,7 +3137,7 @@ Exec={exec_cmd}
 Icon={target_icon_path}
 Terminal=false
 Categories=Network;WebBrowser;
-X-SwiftInstall=PWA
+X-AppInstall=PWA
 """
         escaped_content = desktop_content.replace("'", "'\\''")
         desktop_path = f"/usr/share/applications/{app_name}.desktop"
@@ -3079,6 +3273,10 @@ X-SwiftInstall=PWA
             "dependency problems",
             "trying to overwrite",
             "dpkg: dependency problems prevent",
+            "Error: Package:",
+            "requires:",
+            "but is not installable",
+            "Broken packages",
             "configure: error",
             # Patrones en español
             "depende de",
@@ -3089,7 +3287,10 @@ X-SwiftInstall=PWA
             "dpkg: problemas de dependencias impiden",
             "error al procesar el paquete",
             "dependencias no satisfechas",
-            "paquete no está instalado"
+            "paquete no está instalado",
+            "Error: El paquete:",
+            "necesita:",
+            "requiere:"
         ]
         
         stderr_lower = stderr_output.lower()
@@ -3197,7 +3398,7 @@ X-SwiftInstall=PWA
         self.progress_bar.set_visible(True)
         
         # Construir comando para instalar paquetes
-        cmd = ['pkexec', 'apt-get', 'install', '-y'] + packages
+        cmd = pkg_manager.install_multiple(packages)
         
         thread = threading.Thread(target=self.run_auto_dependency_install, args=(cmd, packages))
         thread.daemon = True
@@ -3275,7 +3476,7 @@ X-SwiftInstall=PWA
                 self.progress_bar.set_fraction(0.0)
                 self.progress_bar.set_visible(True)
                 
-                cmd = ['pkexec', 'apt-get', 'install', '-f', '-y']
+                cmd = pkg_manager.fix_broken()
                 thread = threading.Thread(target=self.run_auto_fix, args=(cmd,))
                 thread.daemon = True
                 thread.start()
@@ -3345,10 +3546,8 @@ X-SwiftInstall=PWA
         # Reconstruir el comando de instalación
         file_extension = os.path.splitext(self.file_path)[1].lower()
         
-        if file_extension == '.deb':
-            cmd = ['pkexec', 'dpkg', '-i', self.file_path]
-        elif file_extension == '.rpm':
-            cmd = ['pkexec', 'rpm', '-i', self.file_path]
+        if file_extension == '.deb' or file_extension == '.rpm':
+            cmd = pkg_manager.install_local(self.file_path)
         elif file_extension == '.appimage':
             # Para AppImage usamos la nueva lógica (aunque reintentar AppImage es raro)
             config_window = AppImageConfigWindow(self, self.file_path, self.proceed_with_appimage_installation)
@@ -3366,7 +3565,7 @@ X-SwiftInstall=PWA
         thread.start()
 
     def on_report_issue(self, widget):
-        safe_open_url("https://github.com/Inled-Group/swiftinstall/issues")
+        safe_open_url("https://github.com/Inled-Group/appinstall/issues")
     
     def open_inled_es(self, widget):
         safe_open_url("https://inled.es")
@@ -3408,27 +3607,30 @@ X-SwiftInstall=PWA
 
     def search_thread(self, query):
         results = []
-        
-        # Buscar en APT
+
+        # Buscar usando el gestor de paquetes del sistema
         try:
-            apt_output = subprocess.check_output(['apt-cache', 'search', query], timeout=5).decode('utf-8')
-            for line in apt_output.split('\n')[:10]: # Limitar a 10 resultados
-                if line.strip():
-                    pkg_name = line.split(' - ')[0].strip()
-                    desc = line.split(' - ')[1].strip() if ' - ' in line else ""
-                    results.append({'name': pkg_name, 'desc': desc, 'source': 'apt'})
+            results.extend(pkg_manager.search(query)[:15]) # Limitar resultados
         except:
             pass
 
         # Buscar en Homebrew
-        if self.has_brew:
+
+        if HAS_BREW:
+            print(f"DEBUG: Buscando '{query}' en Homebrew usando {BREW_PATH}")
             try:
-                brew_output = subprocess.check_output(['brew', 'search', query], timeout=5).decode('utf-8')
-                for line in brew_output.split('\n')[:10]:
+                brew_output = subprocess.check_output([BREW_PATH, 'search', query], 
+                                                    timeout=10, stderr=subprocess.STDOUT).decode('utf-8')
+                found_count = 0
+                for line in brew_output.split('\n')[:15]:
                     if line.strip() and not line.startswith('=='):
                         results.append({'name': line.strip(), 'desc': _("Fórmula de Homebrew"), 'source': 'brew'})
-            except:
-                pass
+                        found_count += 1
+                print(f"DEBUG: Encontrados {found_count} resultados en Homebrew")
+            except Exception as e:
+                print(f"DEBUG: Error en búsqueda de Homebrew: {e}")
+        else:
+            print("DEBUG: Salto búsqueda de Homebrew (no detectado)")
         
         GLib.idle_add(self.show_search_results, results)
 
@@ -3494,8 +3696,8 @@ X-SwiftInstall=PWA
         about_dialog = Adw.AboutWindow(
             transient_for=self,
             modal=True,
-            application_name="Swift Install",
-            application_icon="es.inled.SwiftInstall",
+            application_name="App Install",
+            application_icon="es.inled.AppInstall",
             version=CURRENT_VERSION,
             comments=_("Instalador de paquetes gráfico para Linux."),
             copyright="© 2026 Inled Group",
@@ -3567,9 +3769,9 @@ def show_dependencies_dialog(parent_window, missing_deps):
     
     return False  # Indicar que faltan dependencias
 
-class SwiftInstallApp(Adw.Application):
+class AppInstallApp(Adw.Application):
     def __init__(self):
-        super().__init__(application_id="com.inled.swiftinstall", flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
+        super().__init__(application_id="com.inled.appinstall", flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
         self.connect("activate", self.on_activate)
         self.connect("command-line", self.on_command_line)
         self.file_to_open = None
@@ -3604,7 +3806,7 @@ class SwiftInstallApp(Adw.Application):
         win.present()
 
 def Component():
-    app = SwiftInstallApp()
+    app = AppInstallApp()
     return app.run(sys.argv)
 
 if __name__ == "__main__":
@@ -3612,9 +3814,9 @@ if __name__ == "__main__":
         Component()
     except Exception as e:
         import traceback
-        error_log = os.path.expanduser("~/.cache/swiftinstall_error.log")
+        error_log = os.path.expanduser("~/.cache/appinstall_error.log")
         with open(error_log, "w") as f:
-            f.write(f"Error starting SwiftInstall: {str(e)}\n")
+            f.write(f"Error starting AppInstall: {str(e)}\n")
             traceback.print_exc(file=f)
         # Intentar mostrar dialogo de error con zenity si es posible, o print
         print(f"Critical error: {e}", file=sys.stderr)

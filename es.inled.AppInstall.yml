@@ -1,8 +1,8 @@
-app-id: es.inled.SwiftInstall
+app-id: es.inled.AppInstall
 runtime: org.gnome.Platform
 runtime-version: '47'
 sdk: org.gnome.Sdk
-command: swiftinstall
+command: appinstall
 finish-args:
   - --share=ipc
   - --share=network
@@ -107,23 +107,23 @@ modules:
         - --share=network
     sources: []
 
-  - name: swiftinstall
+  - name: appinstall
     buildsystem: simple
     build-commands:
-      - install -Dm755 start.py /app/share/swiftinstall/start.py
-      - install -Dm644 styles.css /app/share/swiftinstall/styles.css
-      - install -Dm644 appimage.png /app/share/swiftinstall/appimage.png
-      - install -Dm644 locale/en/LC_MESSAGES/swiftinstall.mo /app/share/locale/en/LC_MESSAGES/swiftinstall.mo
-      - install -Dm644 es.inled.SwiftInstall.metainfo.xml /app/share/metainfo/es.inled.SwiftInstall.metainfo.xml
-      - install -Dm644 swiftinstall/usr/share/applications/es.inled.SwiftInstall.desktop /app/share/applications/es.inled.SwiftInstall.desktop
-      - install -Dm644 swiftinstall/usr/share/pixmaps/es.inled.SwiftInstall.png /app/share/icons/hicolor/256x256/apps/es.inled.SwiftInstall.png
+      - install -Dm755 start.py /app/share/appinstall/start.py
+      - install -Dm644 styles.css /app/share/appinstall/styles.css
+      - install -Dm644 appimage.png /app/share/appinstall/appimage.png
+      - install -Dm644 locale/en/LC_MESSAGES/appinstall.mo /app/share/locale/en/LC_MESSAGES/appinstall.mo
+      - install -Dm644 es.inled.AppInstall.metainfo.xml /app/share/metainfo/es.inled.AppInstall.metainfo.xml
+      - install -Dm644 appinstall/usr/share/applications/es.inled.AppInstall.desktop /app/share/applications/es.inled.AppInstall.desktop
+      - install -Dm644 appinstall/usr/share/pixmaps/es.inled.AppInstall.png /app/share/icons/hicolor/256x256/apps/es.inled.AppInstall.png
       - mkdir -p /app/bin
       - |
-        cat > /app/bin/swiftinstall << 'EOF'
+        cat > /app/bin/appinstall << 'EOF'
         #!/bin/bash
-        exec python3 /app/share/swiftinstall/start.py "$@"
+        exec python3 /app/share/appinstall/start.py "$@"
         EOF
-      - chmod +x /app/bin/swiftinstall
+      - chmod +x /app/bin/appinstall
     sources:
       - type: dir
         path: .

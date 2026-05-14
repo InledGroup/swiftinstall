@@ -5,11 +5,11 @@ snap
 -snapcraft.yaml
 usr
 -bin
---swiftinstall
+--appinstall
 -share
 --applications
----swiftinstall.desktop
+---appinstall.desktop
 --pixmaps
----swiftinstall.png
---swiftinstall
+---appinstall.png
+--appinstall
 

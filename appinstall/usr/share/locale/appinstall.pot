@@ -542,7 +542,7 @@ msgid "Menú"
 msgstr ""
 
 #: start.py:2378
-msgid "Acerca de Swift Install"
+msgid "Acerca de App Install"
 msgstr ""
 
 #: start.py:2382
@@ -626,7 +626,7 @@ msgid "Vaya, no he podido comprobar las actualizaciones. ¿Estás conectado a in
 msgstr ""
 
 #: start.py:2854
-msgid "Formato de paquete no soportado por Swift Install"
+msgid "Formato de paquete no soportado por App Install"
 msgstr ""
 
 #: start.py:2870
